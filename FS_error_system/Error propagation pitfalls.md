@@ -1,4 +1,8 @@
-
+```ruby
+require 'redcarpet'
+markdown = Redcarpet.new("Hello World!")
+puts markdown.to_html
+```
 
 /*
 #[derive(Debug, Serialize, Deserialize)]
@@ -38,6 +42,7 @@ When File::open fails, we use Err(Box::new(err)) to wrap the concrete error
 into a Box<dyn StdError>. This allows us to return a trait object that 
 implements the Error trait, enabling us to handle different error types uniformly.
 */
+
 fn open_file(filename: &str) -> Result<File, Box<dyn StdError>> {
     match File::open(filename) {
         Ok(file) => Ok(file),
