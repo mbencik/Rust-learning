@@ -1,11 +1,6 @@
 
+
 ```rust
-/*
-#[derive(Debug, Serialize, Deserialize)]
-struct Guess_data {
-    data_sources: String,
-}
-*/
 
 #[derive(Debug, Serialize, Deserialize)]
 struct YamlData {
@@ -54,12 +49,6 @@ fn open_file_1(filename: &str) -> Result<File, io::Error> {
 }
 
 /*
-match File::open(filename) {
-    Ok(file) => Ok(file),
-    Err(err) => Err(Box::new(err)),
-}*/
-
-/*
 // because the Ok(yaml_data) is mimssing the compiler goes from the position that the return procedure is returning the wrong type or unit there by causing an mismatched types error
 fn read_yaml_file_fail_1(file: File) -> Result<YamlData, serde_yaml::Error> {
     let reader = std::io::BufReader::new(file);
@@ -89,6 +78,7 @@ fn read_yaml_file_fail_1(file: File) -> Result<YamlData, serde_yaml::Error> {
             */
 }
 */
+
 /* 
 //Missing Ok statement in the end, creates a problem 
 //Either the Ok(yaml_data) has to be set at the end as a return or the let yaml_data shadow hats to be removed
@@ -100,11 +90,10 @@ fn read_yaml_file_fail_2(file: File) -> Result<YamlData, serde_yaml::Error> {
         //Err(err) => Err(err),
         Err(err) =>
         {
-            //return Err("Error reading yaml file please check the file.".into());
             return Err(err);// Convert the error to the appropriate type, 
         }
     }
-    //let yaml_data: YamlData = serde_yaml::from_reader(reader)?;
+    
     Ok(yaml_data) // TODO learn OK return explanation 
     //Ok(()) //you cannot return unit since the yaml_data is expected, again error[E0308]: mismatched types
 }
@@ -117,19 +106,28 @@ fn read_yaml_file_fail_3(file: File) -> Result<YamlData, serde_yaml::Error> {
         //Err(err) => Err(err),
         Err(err) =>
         {
-            //return Err("Error reading yaml file please check the file.".into());
             return Err(err);// Convert the error to the appropriate type, 
         }
     };
-    //let yaml_data: YamlData = serde_yaml::from_reader(reader)?; // the ultimate solution, but be carefull the ? is a special operator for handling the entire correct incorect result malarky
+    
     Ok(yaml_data) // TODO learn OK return explanation 
     //Ok(()) //you cannot return unit since the yaml_data is expected
 }
 
+# The ultimate solution for error propagation
+
+let yaml_data: YamlData = serde_yaml::from_reader(reader)?;
+```
+In Rust, the ? operator is used for error propagation. It's often placed at the end of an expression that returns a Result type. If the result is Ok(value), the value is unwrapped and returned. If the result is Err(error), the error is returned early from the function, and it is expected that the caller will handle the error.
+
+In the context of the comment, it's emphasized that using ? with from_reader(reader) is the preferred way to handle errors during deserialization because it succinctly handles both successful and failed cases.
+
+The phrase "the ultimate solution" implies that using ? operator helps simplify error handling and is considered idiomatic Rust code. However, it's crucial to be aware that the ? operator can only be used in functions that return a Result type.
 
 //to avoid the Ok in the end do not shadow the yaml_data in the match expression
 //in this case the Ok(yaml_data) => yaml_data will be transformed into Ok(yaml_data) => Ok(yaml_data)
 // there is no statement Ok in the end since the last curly brace does not have a semi colon and this means inplictly that the function ends
+```rust
 fn read_yaml_file_fail_3_1(file: File) -> Result<YamlData, serde_yaml::Error> {
     let reader = std::io::BufReader::new(file);
     match serde_yaml::from_reader(reader) {
