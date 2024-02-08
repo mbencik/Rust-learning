@@ -1,9 +1,5 @@
-```ruby
-require 'redcarpet'
-markdown = Redcarpet.new("Hello World!")
-puts markdown.to_html
-```
 
+```rust
 /*
 #[derive(Debug, Serialize, Deserialize)]
 struct Guess_data {
@@ -213,4 +209,4 @@ fn read_yaml_file_4(file: File) -> Result<YamlData, serde_yaml::Error> {
         Err(err) => Err(err),
     }
 }
-
+```
