@@ -1,2 +1,2 @@
 # Rust-learning
-Small projects bout learning rust
+Small projects about learning rust
