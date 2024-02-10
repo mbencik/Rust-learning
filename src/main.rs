@@ -53,40 +53,6 @@ fn open_file_1(filename: &str) -> Result<File, io::Error> {
     }
 }
 
-/*
-// Because the Ok(yaml_data) is missing, the compiler assumes that the return procedure
-// is returning the wrong type or unit, causing a mismatched types error.
-fn read_yaml_file_fail_1(file: File) -> Result<YamlData, serde_yaml::Error> {
-    let reader = std::io::BufReader::new(file);
-    match serde_yaml::from_reader(reader) {
-        Ok(yaml_data) => Ok(yaml_data), // Return yaml_data if deserialization succeeds
-        Err(err) => {
-            return Err(err); // Convert the error to the appropriate type and return
-        }
-    };
-
-    //Ok(yaml_data) // the compiler has in this case no return since there is a smicolon at the end of the match
-
-    // The compiler has no return in this case since there is a semicolon at the end of the match.
-    // This causes a mismatched types error.
-    /*
-    error[E0308]: mismatched types
-    --> src\main.rs:69:41
-    |
-    69 | fn read_yaml_file_fail_1(file: File) -> Result<YamlData, serde_yaml::Error> {
-    |    ---------------------                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected `Result<YamlData, Error>`, found `()`
-    |    |
-    |    implicitly returns `()` as its body has no tail or `return` expression
-    ...
-    79 |     };
-    |      - help: remove this semicolon to return this value
-    |
-    = note:   expected enum `Result<YamlData, serde_yaml::Error>`
-            found unit type `()`
-    */
-}
-*/
-
 /* 
 //Missing Ok statement in the end, creates a problem 
 //Either the Ok(yaml_data) has to be set at the end as a return or the let yaml_data shadow hats to be removed
