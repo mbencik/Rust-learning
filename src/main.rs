@@ -8,13 +8,6 @@ use serde_yaml::*;
 use std::result::Result;
 
 
-/*
-#[derive(Debug, Serialize, Deserialize)]
-struct Guess_data {
-    data_sources: String,
-}
-*/
-
 #[derive(Debug, Serialize, Deserialize)]
 struct YamlData {
     sentences: Vec<String>,
@@ -60,11 +53,6 @@ fn open_file_1(filename: &str) -> Result<File, io::Error> {
     }
 }
 
-/*
-match File::open(filename) {
-    Ok(file) => Ok(file),
-    Err(err) => Err(Box::new(err)),
-}*/
 
 /*
 // because the Ok(yaml_data) is mimssing the compiler goes from the position that the return procedure is returning the wrong type or unit there by causing an mismatched types error
@@ -96,6 +84,7 @@ fn read_yaml_file_fail_1(file: File) -> Result<YamlData, serde_yaml::Error> {
             */
 }
 */
+
 /* 
 //Missing Ok statement in the end, creates a problem 
 //Either the Ok(yaml_data) has to be set at the end as a return or the let yaml_data shadow hats to be removed
@@ -219,27 +208,30 @@ fn read_yaml_file_4(file: File) -> Result<YamlData, serde_yaml::Error> {
 
 
 fn main() {
-    /* 
-    let open_file_false = open_file( "Hello, world!");
-    let ret = match open_file_false {
+    //This code structure demonstrates how you can handle file opening errors, print 
+    //messages, format strings using the format! macro, and handle return values. Make 
+    //sure to adjust the code according to the logic and requirements of your program.
+    let open_file_result = open_file("Hello, world!");
+    match open_file_result {
         Ok(yaml_data) => yaml_data,
         Err(err) => {
-            //return Err("Error reading yaml file please check the file.".into());
-            //return Err(format!("Error: {}", err).into());// Convert the error to the appropriate type, 
-            //Err(format!("Error: {}", err).into());
-            //eprintln!("Failed to open file: {}", err);
             println!("Failed to open file: {}", err);
-            //format!("Failed to open file: {}", err);
-            let test = format!("test");          // => "test"
-            println!("formatex text print: {}", test);
-            format!("hello {}", "world!");               // => "hello world!"
-            format!("x = {}, y = {val}", 10, val = 30);  // => "x = 10, y = 30"
+            let test = "test";
+            println!("Formatted text: {}", test);
+    
+            // Using format! macro directly without discarding the result
+            let message = format!("hello {}", "world!"); // => "hello world!"
+            println!("{}", message);
+    
+            // Using format! macro with variable interpolation
             let (x, y) = (1, 2);
-            format!("{x} + {y} = 3");                    // => "1 + 2 = 3"
-            return;
+            let equation = format!("{x} + {y} = 3", x = x, y = y); // => "1 + 2 = 3"
+            println!("{}", equation);
+    
+            return; // Ensure proper termination or handle the error gracefully
         },
     };
-    */
+
     /* 
     println!("Hello, world!");
     let open_file_false_1 = open_file_1( "Hello, world!");
