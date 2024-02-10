@@ -53,22 +53,24 @@ fn open_file_1(filename: &str) -> Result<File, io::Error> {
     }
 }
 
-
 /*
-// because the Ok(yaml_data) is mimssing the compiler goes from the position that the return procedure is returning the wrong type or unit there by causing an mismatched types error
+// Because the Ok(yaml_data) is missing, the compiler assumes that the return procedure
+// is returning the wrong type or unit, causing a mismatched types error.
 fn read_yaml_file_fail_1(file: File) -> Result<YamlData, serde_yaml::Error> {
     let reader = std::io::BufReader::new(file);
     match serde_yaml::from_reader(reader) {
-        Ok(yaml_data) => Ok(yaml_data),
-        Err(err) =>
-        {
-            return Err(err);// Convert the error to the appropriate type, 
+        Ok(yaml_data) => Ok(yaml_data), // Return yaml_data if deserialization succeeds
+        Err(err) => {
+            return Err(err); // Convert the error to the appropriate type and return
         }
     };
 
-    //Ok(yaml_data) // the compiler has in this case no return since there is a smicolon at the end of the match  
-/* 
-        error[E0308]: mismatched types
+    //Ok(yaml_data) // the compiler has in this case no return since there is a smicolon at the end of the match
+
+    // The compiler has no return in this case since there is a semicolon at the end of the match.
+    // This causes a mismatched types error.
+    /*
+    error[E0308]: mismatched types
     --> src\main.rs:69:41
     |
     69 | fn read_yaml_file_fail_1(file: File) -> Result<YamlData, serde_yaml::Error> {
@@ -81,7 +83,7 @@ fn read_yaml_file_fail_1(file: File) -> Result<YamlData, serde_yaml::Error> {
     |
     = note:   expected enum `Result<YamlData, serde_yaml::Error>`
             found unit type `()`
-            */
+    */
 }
 */
 
@@ -206,8 +208,8 @@ fn read_yaml_file_4(file: File) -> Result<YamlData, serde_yaml::Error> {
     }
 }
 
-
-fn main() {
+fn fail_to_openfile_1()
+{
     //This code structure demonstrates how you can handle file opening errors, print 
     //messages, format strings using the format! macro, and handle return values. Make 
     //sure to adjust the code according to the logic and requirements of your program.
@@ -231,6 +233,27 @@ fn main() {
             return; // Ensure proper termination or handle the error gracefully
         },
     };
+}
+
+fn fail_to_openfile_2()
+{
+    println!("Hello, world!");
+
+    let open_file_false_1 = open_file_1("Hello, world!");
+    let ret = match open_file_false_1 {
+        Ok(yaml_data) => yaml_data, // If file opened successfully, return the data
+        Err(err) => {
+            // Print the error message
+            println!("Failed to open file: {}", err);
+            return; // Exit the function if there's an error
+        }
+    };
+}
+
+fn main() {
+
+    
+    fail_to_openfile_1();
 
     /* 
     println!("Hello, world!");
