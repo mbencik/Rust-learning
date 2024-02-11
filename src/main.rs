@@ -69,7 +69,7 @@ fn read_yaml_file_fail_2(file: File) -> Result<YamlData, serde_yaml::Error> {
         }
     }
     //let yaml_data: YamlData = serde_yaml::from_reader(reader)?;
-    Ok(yaml_data) // TODO learn OK return explanation 
+    //Ok(yaml_data) // TODO learn OK return explanation 
     //Ok(()) //you cannot return unit since the yaml_data is expected, again error[E0308]: mismatched types
 }
 */
@@ -184,18 +184,6 @@ fn fail_to_openfile_1()
         Ok(yaml_data) => yaml_data,
         Err(err) => {
             println!("Failed to open file: {}", err);
-            let test = "test";
-            println!("Formatted text: {}", test);
-    
-            // Using format! macro directly without discarding the result
-            let message = format!("hello {}", "world!"); // => "hello world!"
-            println!("{}", message);
-    
-            // Using format! macro with variable interpolation
-            let (x, y) = (1, 2);
-            let equation = format!("{x} + {y} = 3", x = x, y = y); // => "1 + 2 = 3"
-            println!("{}", equation);
-    
             return; // Ensure proper termination or handle the error gracefully
         },
     };
@@ -203,10 +191,8 @@ fn fail_to_openfile_1()
 
 fn fail_to_openfile_2()
 {
-    println!("Hello, world!");
-
-    let open_file_false_1 = open_file_1("Hello, world!");
-    let ret = match open_file_false_1 {
+    let open_file_false = open_file_1("Hello, world!");
+    let ret = match open_file_false {
         Ok(yaml_data) => yaml_data, // If file opened successfully, return the data
         Err(err) => {
             // Print the error message
@@ -218,13 +204,15 @@ fn fail_to_openfile_2()
 
 fn main() {
 
-    
-    fail_to_openfile_1();
+    // first filing test to oupen a non existing file 
+    //fail_to_openfile_1();
 
+    // second filing test to oupen a non existing file 
+    //fail_to_openfile_2();
 
-    println!("Hello, world!");
+    // shows the build failure in case the correct return from the function is missing
+    //read_yaml_file_fail_2();
+
     let open_file_ret = open_file( "Guess_data.yml");
     let open_file_ret_1 = open_file_1( "Guess_data.yml");
-
-    println!("Hello, world!");
 }
