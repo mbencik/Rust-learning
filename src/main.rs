@@ -221,23 +221,7 @@ fn main() {
     
     fail_to_openfile_1();
 
-    /* 
-    println!("Hello, world!");
-    let open_file_false_1 = open_file_1( "Hello, world!");
-    let ret = match open_file_false_1 {
-        Ok(yaml_data) => yaml_data,
-        //Err(err) => Err(format!("Failed to open file: {}", err).into()),
-        
-        Err(err) => {
-            //return Err("Error reading yaml file please check the file.".into());
-            //return Err(format!("Failed to open file: {}", err).into());// Convert the error to the appropriate type, 
-            //Err(format!("Error: {}", err).into());
-            //format!("Failed to deserialize YAML: {}", err);
-            println!("Failed to open file: {}", err);
-            return;
-        }
-    };
-    */
+
     println!("Hello, world!");
     let open_file_ret = open_file( "Guess_data.yml");
     let open_file_ret_1 = open_file_1( "Guess_data.yml");
