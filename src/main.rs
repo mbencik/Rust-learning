@@ -12,28 +12,7 @@ use std::result::Result;
 struct YamlData {
     sentences: Vec<String>,
 }
-//TODO Separate the file open and deserialization of yaml, othervise I have to solve the problem with 2 different errors
-fn read_yaml_file(filename: &str) -> Result<YamlData, Box<dyn StdError>> {
 
-    let yaml_content = fs::read_to_string(filename).expect("Failed to read file");
-    let yaml_guess_list: serde_yaml::Value = serde_yaml::from_str(&yaml_content).expect("Failed to parse YAML");
-
-    let f = std::fs::File::open(filename).expect("Could not open file.");
-    let reader = BufReader::new(f);
-    let yaml_guess_list_strings:YamlData = serde_yaml::from_reader(reader).expect("Could not read values.");
-    println!("deserialized = {:?}", yaml_guess_list);
-    println!("deserialized 2 = {:?}", yaml_guess_list_strings);
-
-
-    // Open the YAML file
-    let file = std::fs::File::open(filename)?;
-    let reader = BufReader::new(file);
-
-    // Deserialize the YAML content using serde_yaml::from_reader
-    let yaml_data: YamlData = serde_yaml::from_reader(reader)?;
-
-    Ok(yaml_data)
-}
 /*
 When File::open fails, we use Err(Box::new(err)) to wrap the concrete error 
 into a Box<dyn StdError>. This allows us to return a trait object that 
@@ -53,6 +32,23 @@ fn open_file_1(filename: &str) -> Result<File, io::Error> {
     }
 }
 
+//TODO Separate the file open and deserialization of yaml, othervise I have to solve the problem with 2 different errors
+fn read_yaml_file(filename: &str) -> Result<YamlData, Box<dyn StdError>> {
+
+    let yaml_content = fs::read_to_string(filename).expect("Failed to read file");
+    let yaml_guess_list: serde_yaml::Value = serde_yaml::from_str(&yaml_content).expect("Failed to parse YAML");
+
+    let f = std::fs::File::open(filename).expect("Could not open file.");
+    let reader = BufReader::new(f);
+    let yaml_guess_list_strings:YamlData = serde_yaml::from_reader(reader).expect("Could not read values.");
+    
+    println!("YAML deserialized to Serde value type = {:?}", yaml_guess_list);
+    println!("YAML deserialized to a vector of strings = {:?}", yaml_guess_list_strings);
+
+    Ok(yaml_guess_list_strings)
+}
+
+
 /* 
 //Missing Ok statement in the end, creates a problem 
 //Either the Ok(yaml_data) has to be set at the end as a return or the let yaml_data shadow hats to be removed
@@ -68,7 +64,7 @@ fn read_yaml_file_fail_2(file: File) -> Result<YamlData, serde_yaml::Error> {
             return Err(err);// Convert the error to the appropriate type, 
         }
     }
-    //let yaml_data: YamlData = serde_yaml::from_reader(reader)?;
+    
     //Ok(yaml_data) // TODO learn OK return explanation 
     //Ok(()) //you cannot return unit since the yaml_data is expected, again error[E0308]: mismatched types
 }
@@ -86,14 +82,14 @@ fn read_yaml_file_fail_3(file: File) -> Result<YamlData, serde_yaml::Error> {
         }
     };
     //let yaml_data: YamlData = serde_yaml::from_reader(reader)?; // the ultimate solution, but be carefull the ? is a special operator for handling the entire correct incorect result malarky
-    Ok(yaml_data) // TODO learn OK return explanation 
+    Ok(yaml_data) // as long as this line is there this is the return value
     //Ok(()) //you cannot return unit since the yaml_data is expected
 }
 
 
 //to avoid the Ok in the end do not shadow the yaml_data in the match expression
 //in this case the Ok(yaml_data) => yaml_data will be transformed into Ok(yaml_data) => Ok(yaml_data)
-// there is no statement Ok in the end since the last curly brace does not have a semi colon and this means inplictly that the function ends
+// there is no statement Ok in the end since the last curly brace does not have a semi colon and this means implictly that the function ends
 fn read_yaml_file_fail_3_1(file: File) -> Result<YamlData, serde_yaml::Error> {
     let reader = std::io::BufReader::new(file);
     match serde_yaml::from_reader(reader) {
@@ -138,7 +134,6 @@ fn read_yaml_file_1(file: File) -> Result<YamlData, serde_yaml::Error> {
             return Err(err);// Convert the error to the appropriate type, 
         }
     }
-    //let yaml_data: YamlData = serde_yaml::from_reader(reader)?;
     //Ok(yaml_data) // TODO learn OK return explanation 
     //Ok(()) //the inner bracket is called unit and called when there no meaningful return 
 }
@@ -147,7 +142,6 @@ fn read_yaml_file_1(file: File) -> Result<YamlData, serde_yaml::Error> {
 
 //https://users.rust-lang.org/t/help-understanding-return-for-box-dyn-error/33748/2
 fn read_yaml_file_2(filename: &str) -> Result<YamlData, Box<dyn StdError>> {
-    //let file = std::fs::File::open(filename)?;
     let file = if let Ok(file) = File::open(filename) {
         file
     } else {
