@@ -138,7 +138,7 @@ fn read_yaml_file_fail_3(file: File) -> Result<YamlData, serde_yaml::Error> {
 }
 
 # The ultimate solution for error propagation
-
+```rust
 let yaml_data: YamlData = serde_yaml::from_reader(reader)?;
 ```
 In Rust, the ? operator is used for error propagation. It's often placed at the end of an expression that returns a Result type. If the result is Ok(value), the value is unwrapped and returned. If the result is Err(error), the error is returned early from the function, and it is expected that the caller will handle the error.
@@ -147,9 +147,9 @@ In the context of the comment, it's emphasized that using ? with from_reader(rea
 
 The phrase "the ultimate solution" implies that using ? operator helps simplify error handling and is considered idiomatic Rust code. However, it's crucial to be aware that the ? operator can only be used in functions that return a Result type.
 
-//to avoid the Ok in the end do not shadow the yaml_data in the match expression
-//in this case the Ok(yaml_data) => yaml_data will be transformed into Ok(yaml_data) => Ok(yaml_data)
-// there is no statement Ok in the end since the last curly brace does not have a semi colon and this means inplictly that the function ends
+to avoid the Ok in the end do not shadow the yaml_data in the match expression
+in this case the Ok(yaml_data) => yaml_data will be transformed into Ok(yaml_data) => Ok(yaml_data)
+there is no statement Ok in the end since the last curly brace does not have a semi colon and this means inplictly that the function ends
 ```rust
 fn read_yaml_file_fail_3_1(file: File) -> Result<YamlData, serde_yaml::Error> {
     let reader = std::io::BufReader::new(file);
@@ -172,7 +172,7 @@ fn read_yaml_file_fail_4(file: File) -> Result<YamlData, serde_yaml::Error> {
     Ok(yaml_data) // TODO learn OK return explanation 
     //Ok(()) //you cannot return unit since the yaml_data is expected, again error[E0308]: mismatched types
 }
-
+```
 
 
 //It returns a Result<User, Box<dyn Error>>, indicating that it can either 
@@ -182,6 +182,7 @@ fn read_yaml_file_fail_4(file: File) -> Result<YamlData, serde_yaml::Error> {
 //propagating them to the calling function.
 //When applied to values of the Result<T, E> type, it propagates errors. If the 
 //value is Err(e), then it will return Err(From::from(e))
+```rust
 //fn read_yaml_file_1(file: File) -> Result<YamlData, serde_yaml::Error> {
 fn read_yaml_file_1(file: File) -> Result<YamlData, serde_yaml::Error> {
     let reader = std::io::BufReader::new(file);
