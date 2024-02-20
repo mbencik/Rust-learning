@@ -43,6 +43,8 @@ The official documentation on this part is a bit deficient and unclear. So you m
 
 ## Fat pointer diagram
 
+
+
 ### Explanation of the basic pointer 
 In Rust, both **```Box<dyn Error>```** and **```&mut dyn Error```** are used to handle errors in a similar manner, but they represent different ownership and borrowing semantics.
 
@@ -52,10 +54,10 @@ Since it's a box, it has a fixed size and lives on the heap.
 **```Box<dyn Error>```** is typically used when you need to move an error across ownership boundaries or when you want to store an error with a dynamic type in a data structure.
 
 ```rust
-// Example of creating a **```Box<dyn Error>```**
+// Example of creating a Box<dyn Error>
 use std::error::Error;
 
-fn produce_error() -> **```Box<dyn Error>```** {
+fn produce_error() -> Box<dyn Error> {
     // Create an error and return it boxed
     Box::new(std::io::Error::new(std::io::ErrorKind::NotFound, "File not found"))
 }
@@ -322,4 +324,5 @@ fn read_yaml_file_4(file: File) -> Result<YamlData, serde_yaml::Error> {
 ```
 
 
-
+Source 
+https://fettblog.eu/rust-enums-wrapping-errors/
