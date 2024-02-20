@@ -1,6 +1,4 @@
-An Analysis of My Journey in Learning Rust and Handling Its Finer Points
-
-Definition of Error Propagation for Rust Beginners
+# Definition of Error Propagation for Rust Beginners
 
 The definition is simple: a program does something, it fails, or something goes wrong, and it should give you as a programmer a hint about what happened. This looks simple, but in my journey, it turned out to be an obstacle course littered with mines.
 
@@ -25,15 +23,66 @@ How to handle them. This code represents the example which types can be returned
 ```Rust
 Result<YamlData, serde_yaml::Error>
 Result<File, io::Error>
-
-Result<YamlData, Box<dyn StdError>>
 ```
-Option one: we split the error handling into two different functions. One function handles the file I/O and propagates just I/O errors, while the second function propagates and handles just the YAML errors. 
-Option tow: The normal case scenario in C++ would be handling exceptions on ste spot or returning through templated and havig a function to handle. We open the file and we process the YAML file or whichever file we have. Now, if an error happens in that case, we have a problem. The problem is the function will fail in any of those two function call fail. To return the error out of this function, we need to handle both types with our generic type (there it is again). This generic type is the Box standard error **```Box<dyn Error>```** in Rust, but wait what?
-What is **```Box<dyn Error>```**, we where just wanting to return Result type ??? Well welcome, to the reality, the Result<Ok, Err> returns either or, they are generics by the way and the Enums a struct, but the Err needs a type specification that pens out to be a **```Box<dyn Error>```**.
-Now, the Box standard error is a very peculiar thing. Box allows certain things to be allocated on the heap and kept alive for an extended period of time since they are on the heap. Now, the problem with this is that the struct errors, have been allocated inside the function (so probably on the stack, but that is never mentioned), so basically outside of the scope of its parent function. To access the error, the common practice is to use the box as a "pointer" which keeps those allocations alive so it can access them outside of the function scope, thereby creating a conundrum because the programmer who's really diligent and tries to make everything precise and concise doesn't know how the error structures have actually been allocated (in function stack, but Box on the heap), probably on the heap.
+#### Option one
+We split the error handling into two different functions. One function handles the file I/O and propagates just I/O errors, while the second function propagates and handles just the YAML errors. 
 
-The next problem is that the error type gets accessed by the standard error, and the standard error is a trait. Meaning no data, no fields, which makes it weird, since the standard identifications from the std error can be used to access the data from the custom Error type. First what the hell it then **```Box<dyn Error>```** Pointer to a trait that is imaginary? Turns out there is something caled a trait object.  
+#### Option tow
+The normal case scenario in C++ would be handling exceptions on ste spot or returning through templated and havig a function to handle. We open the file and we process the YAML file or whichever file we have. Now, if an error happens in that case, we have a problem. The problem is the function will fail in any of those two function call fail. To return the error out of this function, we need to handle both types with our generic type (there it is again). This generic type is the Err part of the Result<Ok, Err> type. How do we return it? The types size in Rust should be known in compile time, at least that is what I thought. That is just the half of the story, actualy also the size should be known. After some research one way how to return a uknown size type back to the caller function is the **```Box<dyn Error>```** in Rust, but wait what?
+
+What is **```Box<dyn Error>```**, we where just wanting to return Result type? How did we get from **```Err<T>```** to **```Box<dyn Error>```**? Well welcome, to the reality, the Result<Ok, Err> returns either or, they are generics by the way and the Enums is a struct, but the Err needs a type specification and size specification known at compile time, since this is not the case here until runtime, we need to work around all of those problems. All of this introduces, something that is callet the trait object, we have to work with a **```Box<dyn Error>```** that is a trait object. Now the, those types whose size is known at compil time are called **sized types**, one special thing is that a trait object size is not known at compile time. Trait Objects: When using trait objects, which are references to types that implement a certain trait, the size of the concrete type implementing the trait is not known at compile time. Therefore, trait objects are unsized. To work with trait objects, Rust requires a reference (&) or a smart pointer like Box or Arc (i got this somewhere). 
+
+Here it is how it works. The error type gets accessed by the std::Error, and the std::Error is a trait. Meaning no data, no fields, which makes it an object without data, since the standard identifications from the std::Error can be used to access the data from the custom Error type. The  **```Box<dyn Error>```** is a very tricky thing. the Box is  pointer that is pointing to the parts of the trait object. Trait objects are represented by a **fat pointer** the fat pointer has 2 parts the data pointer and the vtable pointer, the vtable it the table that is having all the trait methods that a trait is implementing, or inhereting/deriving. It is roughly a equivalent to the pure abstract class full of virtual functions in C++. As it is visible the data part is not known at compile time the vtable part is known to solve this the compiler solves this by recognizing the dyn word as dynamic dispatch and leaving the data part resolution to the runtime.
+
+```Rust
+Result<YamlData, Box<dyn std::error::Error>>
+```
+
+
+The official documentation on this part is a bit deficient and unclear. So you might exactly as me strugle through the information gathering process and understanding things.
+
+## Fat pointer diagram
+
+### Explanation of the basic pointer 
+In Rust, both **```Box<dyn Error>```** and **```&mut dyn Error```** are used to handle errors in a similar manner, but they represent different ownership and borrowing semantics.
+
+**```Box<dyn Error>```** is a boxed trait object that owns its underlying data.
+It represents a heap-allocated object that implements the Error trait.
+Since it's a box, it has a fixed size and lives on the heap.
+**```Box<dyn Error>```** is typically used when you need to move an error across ownership boundaries or when you want to store an error with a dynamic type in a data structure.
+
+```rust
+// Example of creating a **```Box<dyn Error>```**
+use std::error::Error;
+
+fn produce_error() -> **```Box<dyn Error>```** {
+    // Create an error and return it boxed
+    Box::new(std::io::Error::new(std::io::ErrorKind::NotFound, "File not found"))
+}
+```
+
+**```&mut dyn Error```** is a mutable reference to an object that implements the Error trait.
+It does not own the underlying data; it borrows it mutably.
+This reference is typically used when you want to pass around an error without transferring ownership, allowing the calling function to inspect or modify it.
+
+
+```rust
+// Example of processing a mutable reference to dyn Error
+use std::error::Error;
+
+fn process_error(error: &mut dyn Error) {
+    // Modify the error if necessary
+    error.source(); // Example usage of the Error trait method
+}
+```
+
+Choosing Between **```Box<dyn Error>```** and **```&mut dyn Error```**:
+
+Use **```Box<dyn Error>```** when you need to transfer ownership of the error, store it in a data structure, or return it from a function.
+Use **```&mut dyn Error```** when you want to borrow the error mutably for inspection or modification without transferring ownership.
+
+In summary, **```Box<dyn Error>```** is used for owning errors and transferring them across boundaries, while **```&mut dyn Error```** is used for borrowing errors for temporary access or modification. The choice depends on the ownership and borrowing semantics required by your code.
+
 |||||||<  We would need to identify which error type it is, cast the inner trait preferably to a struct (no idea if that is possible, probably trait should not be upgraded), which is probably impossible. That means either from outside reimplement the needed functions (to figure out parse the errors) to actually read the internal fields of the custom error. This makes the whole thing a bit top-heavy and full of overhead, and that is a bit of a problem.
 The main issue of it all is that a simple procedure that should actually just give you the option to read something (file), propagate the error, and handle the error properly. One more thing is the error in the end created on the heap or is created on the stack (is so overcomplicated that it's almost unbelievable)? Go find out this so you know. This is, for example, for a beginner, very difficult to comprehend. Why does he need to resolve this many problems with just one tiny problem? Why does it take a full day or longer to resolve the problem of propagating and visualizing an error? He just wanted to open a file and propagate an error if it fails. A much better process would be if the error struct that is a trait extension extends its implementation so there is an option that we use the error rate and you have a bare-bone error trait like now and that stays as is, but there is an error class that has baseline implementations of the error trait. This can be used to identify what kind of error it is. That is why the '?' was introduced to hide the complexities of the implementation and match-making to resolve the errors. Which is great for beginners but bad for people that want more control and clear practices how to handle error propagation.
 The bad part is that this problem would extend to any type in the Rust realm where we need generics, basically or interfaces, abstract features to send such common data out.
@@ -41,7 +90,7 @@ The bad part is that this problem would extend to any type in the Rust realm whe
 
 In this document the goal is to adress the error propagation, error handling, nonsense with the documentation and problems with the explanations.
 
-**```Box<dyn Error>```** is hit early, the reason is in my case that just wanted to open a file and read it, sounds logical. Right? Welll not so fasst in rust those two thigs produce different types of error which in turn if you want ot propagate the need special care. This is when **```Box<dyn Error>```**, but in the official documentation there is no definitive guidance what should happen if we need to handle multiple diffenrent errors and return the ```Result<>``` type. And this happens pritty much right away. Now I have some experience with programming in C/C++ but there the idea is different there one gives or handles a type here one handles a Trait. Now this is no type, but a type/struct inherits the trait but the trait does not have variables butr it has methods which on it self is very confusing. 
+
 
 First the 
 
@@ -273,41 +322,4 @@ fn read_yaml_file_4(file: File) -> Result<YamlData, serde_yaml::Error> {
 ```
 
 
-In Rust, both **```Box<dyn Error>```** and &mut dyn Error are used to handle errors in a similar manner, but they represent different ownership and borrowing semantics.
 
-**```Box<dyn Error>```** is a boxed trait object that owns its underlying data.
-It represents a heap-allocated object that implements the Error trait.
-Since it's a box, it has a fixed size and lives on the heap.
-**```Box<dyn Error>```** is typically used when you need to move an error across ownership boundaries or when you want to store an error with a dynamic type in a data structure.
-
-```rust
-// Example of creating a **```Box<dyn Error>```**
-use std::error::Error;
-
-fn produce_error() -> **```Box<dyn Error>```** {
-    // Create an error and return it boxed
-    Box::new(std::io::Error::new(std::io::ErrorKind::NotFound, "File not found"))
-}
-```
-
-**```&mut dyn Error```** is a mutable reference to an object that implements the Error trait.
-It does not own the underlying data; it borrows it mutably.
-This reference is typically used when you want to pass around an error without transferring ownership, allowing the calling function to inspect or modify it.
-
-
-```rust
-// Example of processing a mutable reference to dyn Error
-use std::error::Error;
-
-fn process_error(error: &mut dyn Error) {
-    // Modify the error if necessary
-    error.source(); // Example usage of the Error trait method
-}
-```
-
-Choosing Between **```Box<dyn Error>```** and &mut dyn Error:
-
-Use **```Box<dyn Error>```** when you need to transfer ownership of the error, store it in a data structure, or return it from a function.
-Use &mut dyn Error when you want to borrow the error mutably for inspection or modification without transferring ownership.
-
-In summary, **```Box<dyn Error>```** is used for owning errors and transferring them across boundaries, while &mut dyn Error is used for borrowing errors for temporary access or modification. The choice depends on the ownership and borrowing semantics required by your code.
