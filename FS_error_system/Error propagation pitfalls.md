@@ -24,26 +24,24 @@ How to handle them. This code represents the example which types can be returned
 Result<YamlData, serde_yaml::Error>
 Result<File, io::Error>
 ```
-#### Option one
-We split the error handling into two different functions. One function handles the file I/O and propagates just I/O errors, while the second function propagates and handles just the YAML errors. 
 
-#### Option tow
-The normal case scenario in C++ would be handling exceptions on ste spot or returning through templated and havig a function to handle. We open the file and we process the YAML file or whichever file we have. Now, if an error happens in that case, we have a problem. The problem is the function will fail in any of those two function call fail. To return the error out of this function, we need to handle both types with our generic type (there it is again). This generic type is the Err part of the Result<Ok, Err> type. How do we return it? The types size in Rust should be known in compile time, at least that is what I thought. That is just the half of the story, actualy also the size should be known. After some research one way how to return a uknown size type back to the caller function is the **```Box<dyn Error>```** in Rust, but wait what?
+#### Option Two
 
-What is **```Box<dyn Error>```**, we where just wanting to return Result type? How did we get from **```Err<T>```** to **```Box<dyn Error>```**? Well welcome, to the reality, the Result<Ok, Err> returns either or, they are generics by the way and the Enums is a struct, but the Err needs a type specification and size specification known at compile time, since this is not the case here until runtime, we need to work around all of those problems. All of this introduces, something that is callet the trait object, we have to work with a **```Box<dyn Error>```** that is a trait object. Now the, those types whose size is known at compil time are called **sized types**, one special thing is that a trait object size is not known at compile time. Trait Objects: When using trait objects, which are references to types that implement a certain trait, the size of the concrete type implementing the trait is not known at compile time. Therefore, trait objects are unsized. To work with trait objects, Rust requires a reference (&) or a smart pointer like Box or Arc (i got this somewhere). 
+In the typical scenario in C++, handling exceptions on the spot or returning through templated functions would suffice. We open the file and process the YAML file or whichever file we have. Now, if an error occurs in either of these function calls, we face a problem. The challenge lies in returning the error out of this function. We need to handle both types with our generic type, as the function might fail in either of the two function calls. This generic type corresponds to the **Err** part of the **```Result<Ok, Err>```** type. But how do we return it? In Rust, the type's size should be known at compile time, or so I thought. However, that's just half of the story. Actually, the size should also be known. After some research, one way to return an unknown size type back to the caller function is through **```Box<dyn Error>```** in Rust. But wait, what is **```Box<dyn Error>```**? Weren't we just aiming to return a **Result** type? How did we get from **```Err<T>```** to **```Box<dyn Error>```**?
 
-Here it is how it works. The error type gets accessed by the std::Error, and the std::Error is a trait. Meaning no data, no fields, which makes it an object without data, since the standard identifications from the std::Error can be used to access the data from the custom Error type. The  **```Box<dyn Error>```** is a very tricky thing. the Box is  pointer that is pointing to the parts of the trait object. Trait objects are represented by a **fat pointer** the fat pointer has 2 parts the data pointer and the vtable pointer, the vtable it the table that is having all the trait methods that a trait is implementing, or inhereting/deriving. It is roughly a equivalent to the pure abstract class full of virtual functions in C++. As it is visible the data part is not known at compile time the vtable part is known to solve this the compiler solves this by recognizing the dyn word as dynamic dispatch and leaving the data part resolution to the runtime.
+Well, welcome to reality. The **```Result<Ok, Err>```** returns either one or the other; they are generics, by the way, and the **Err** needs a type specification and size specification known at compile time. Since this is not the case here until runtime, we need to work around all of these problems. All of this introduces something called the trait object. We have to work with a **```Box<dyn Error>```** that is a trait object. Trait objects, which are references to types that implement a certain trait, do not have a size known at compile time. Therefore, they are unsized. To work with trait objects, Rust requires a reference (**&**) or a smart pointer like **Box** or **Arc** (I got this somewhere).
+
+Here's how it works: The error type is accessed by the **std::Error**, and the **std::Error** is a trait. Meaning no data, no fields, which makes it an object without data, since the standard identifications from the **std::Error** can be used to access the data from the custom Error type. The **```Box<dyn Error>```** is a very tricky thing. The **Box** is a pointer that is pointing to the parts of the trait object. Trait objects are represented by a fat pointer. The fat pointer has two parts: the data pointer and the vtable pointer. The vtable is the table that has all the trait methods that a trait is implementing or inheriting/deriving. It is roughly equivalent to the pure abstract class full of virtual functions in C++. As it is visible, the data part is not known at compile time, and the vtable part is known. To solve this, the compiler recognizes the **dyn** keyword as dynamic dispatch and leaves the data part resolution to the runtime.
 
 ```Rust
 Result<YamlData, Box<dyn std::error::Error>>
 ```
 
-
-The official documentation on this part is a bit deficient and unclear. So you might exactly as me strugle through the information gathering process and understanding things.
+The official documentation on this part is a bit deficient and unclear. So you might exactly as me strugle through the information gathering process and understanding things. Ine the next parts I will try to define the problems and the ideas behind the construction of syntax.
 
 ## Fat pointer diagram
 
-
+![alt text](https://github.com/mbencik/Rust-learning/blob/main/FS_error_system/Images/Rust_pointers_explanation.jpg)
 
 ### Explanation of the basic pointer 
 In Rust, both **```Box<dyn Error>```** and **```&mut dyn Error```** are used to handle errors in a similar manner, but they represent different ownership and borrowing semantics.
@@ -84,6 +82,13 @@ Use **```Box<dyn Error>```** when you need to transfer ownership of the error, s
 Use **```&mut dyn Error```** when you want to borrow the error mutably for inspection or modification without transferring ownership.
 
 In summary, **```Box<dyn Error>```** is used for owning errors and transferring them across boundaries, while **```&mut dyn Error```** is used for borrowing errors for temporary access or modification. The choice depends on the ownership and borrowing semantics required by your code.
+
+![alt text](https://github.com/mbencik/Rust-learning/blob/main/FS_error_system/Images/Rust_pointers_explanation.jpg)
+
+### Explanation of the dyn keyword, dynamic dispatch, sized trait and static dispatch
+
+In the Rust documentation on compile time known sizes I encountered that this is a pritty important concept in Rust. In the Rust documentation [link](https://doc.rust-lang.org/nightly/std/marker/trait.Sized.html) the sized is a trait marker. In one fo the sources it is said "sized is a compiler built-in trait", I dont know about that but it is a trait that does not have to be expllicitly derived and the compiler will still know the size of the object type at compile time. A type is considered sized if the precise size of a value of type is known and fixed at compile time once the real types of the type parameters are known (i.e. after completing monomorphisation).
+
 
 |||||||<  We would need to identify which error type it is, cast the inner trait preferably to a struct (no idea if that is possible, probably trait should not be upgraded), which is probably impossible. That means either from outside reimplement the needed functions (to figure out parse the errors) to actually read the internal fields of the custom error. This makes the whole thing a bit top-heavy and full of overhead, and that is a bit of a problem.
 The main issue of it all is that a simple procedure that should actually just give you the option to read something (file), propagate the error, and handle the error properly. One more thing is the error in the end created on the heap or is created on the stack (is so overcomplicated that it's almost unbelievable)? Go find out this so you know. This is, for example, for a beginner, very difficult to comprehend. Why does he need to resolve this many problems with just one tiny problem? Why does it take a full day or longer to resolve the problem of propagating and visualizing an error? He just wanted to open a file and propagate an error if it fails. A much better process would be if the error struct that is a trait extension extends its implementation so there is an option that we use the error rate and you have a bare-bone error trait like now and that stays as is, but there is an error class that has baseline implementations of the error trait. This can be used to identify what kind of error it is. That is why the '?' was introduced to hide the complexities of the implementation and match-making to resolve the errors. Which is great for beginners but bad for people that want more control and clear practices how to handle error propagation.
@@ -326,3 +331,7 @@ fn read_yaml_file_4(file: File) -> Result<YamlData, serde_yaml::Error> {
 
 Source 
 https://fettblog.eu/rust-enums-wrapping-errors/
+
+Sized trait and concepts
+https://doc.rust-lang.org/nightly/std/marker/trait.Sized.html
+https://huonw.github.io/blog/2015/01/the-sized-trait/
