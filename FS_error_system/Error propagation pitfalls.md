@@ -27,8 +27,8 @@ Result<File, io::Error>
 ```
 
 #### Option one
-To avoid returning 2 types of error, through the result, we can split the function into 2 functions.
-The following code show how this iis built in the code example that is in submited.
+To avoid returning 2 types of errors through the result, we can split the function into 2 functions.
+The following code shows how this is implemented in the example code that is submitted.
 
 ```Rust
 fn open_file_1(filename: &str) -> Result<File, io::Error> {
@@ -54,7 +54,7 @@ fn read_yaml_file_fail_2(file: File) -> Result<YamlData, serde_yaml::Error> {
     Ok(yaml_data) // TODO learn OK return explanation 
 }
 ``` 
-Reviewingthis code I can personally say that I do not like this this should be solved in one function without any problems.
+Reviewing this code, I personally believe that it could be improved to handle the errors more efficiently. It seems like the current implementation could be simplified to handle all cases within a single function, without any issues.
 
 
 #### Option two
