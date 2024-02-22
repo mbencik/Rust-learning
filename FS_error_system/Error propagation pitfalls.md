@@ -19,25 +19,62 @@ Ok I understttod the Result type as a return type. But I want to read and parse 
 
 Just to disect types of orrors that the programm will encounter. The first is the file I/O. For example, if the file does not exist, the drive is not accessible, or the operating system doesn't let us access the directory, or some other problem arises. The other issue can be that the YAML file is parsed by the serde crate (Serde -> short for serialization deserialization) while reading/parsing the YAML file. For example, the format doesn't fit, or there are values that don't comply, or any other problems. The issue is that we have to then propagate the error for the user to see or the system to automatically break off and notify the user.
 
-How to handle them. This code represents the example which types can be returned.
+How to handle them. This code represents the example which types can be returned, as we can see there are 2 types of errors.
 ```Rust
 Result<YamlData, serde_yaml::Error>
 Result<File, io::Error>
 ```
 
-#### Option Two
+#### Option one
+To avoid returning 2 types of error, through the result, we can split the function into 2 functions.
+The following code show how this iis built in the code example that is in submited.
 
-In the typical scenario in C++, handling exceptions on the spot or returning through templated functions would suffice. We open the file and process the YAML file or whichever file we have. Now, if an error occurs in either of these function calls, we face a problem. The challenge lies in returning the error out of this function. We need to handle both types with our generic type, as the function might fail in either of the two function calls. This generic type corresponds to the **Err** part of the **```Result<Ok, Err>```** type. But how do we return it? In Rust, the type's size should be known at compile time, or so I thought. However, that's just half of the story. Actually, the size should also be known. After some research, one way to return an unknown size type back to the caller function is through **```Box<dyn Error>```** in Rust. But wait, what is **```Box<dyn Error>```**? Weren't we just aiming to return a **Result** type? How did we get from **```Err<T>```** to **```Box<dyn Error>```**?
+```Rust
+fn open_file_1(filename: &str) -> Result<File, io::Error> {
+    match File::open(filename) {
+        Ok(file) => Ok(file),
+        Err(err) => Err(err),
+    }
+}
+```
+
+```rust
+fn read_yaml_file_fail_2(file: File) -> Result<YamlData, serde_yaml::Error> {
+    let reader = std::io::BufReader::new(file);
+    let yaml_data = match serde_yaml::from_reader(reader) {
+        Ok(yaml_data) => yaml_data,
+        //Err(err) => Err(err),
+        Err(err) =>
+        {
+            return Err(err);// Convert the error to the appropriate type, 
+        }
+    }
+    
+    Ok(yaml_data) // TODO learn OK return explanation 
+}
+``` 
+Reviewingthis code I can personally say that I do not like this this should be solved in one function without any problems.
+
+
+#### Option two
+
+In the typical scenario in C++, handling exceptions on the spot or returning through templated functions would suffice. We open the file and process the YAML file or whichever file we have. Here we face a problem, the Oopen file function can fail, and the parse Yaml file can also fail. The challenge lies in returning the error out of this functions. We need to handle both types through a generic type. This generic type corresponds to the **Err** part of the **```Result<Ok, Err>```** type. But how do we return it? 
+In Rust, there are some fundamental rules. The type's size should be known at compile time. Also there is the criteria of monomorphoisation, from the compiler book [link](https://rustc-dev-guide.rust-lang.org/backend/monomorph.html) : 
+
+> "Rust takes a different approach: it monomorphizes all generic types. This means that compiler stamps out a different copy of the code of a generic function for each concrete type needed."
+
+However, that's just half of the story. Actually, the size should also be known. After some research, one way to return an unknown size type back to the caller function is through **```Box<dyn Error>```** in Rust. But wait, what is **```Box<dyn Error>```**? Weren't we just aiming to return a **Result** type? How did we get from **```Err<T>```** to **```Box<dyn Error>```**?
 
 Well, welcome to reality. The **```Result<Ok, Err>```** returns either one or the other; they are generics, by the way, and the **Err** needs a type specification and size specification known at compile time. Since this is not the case here until runtime, we need to work around all of these problems. All of this introduces something called the trait object. We have to work with a **```Box<dyn Error>```** that is a trait object. Trait objects, which are references to types that implement a certain trait, do not have a size known at compile time. Therefore, they are unsized. To work with trait objects, Rust requires a reference (**&**) or a smart pointer like **Box** or **Arc** (I got this somewhere).
 
 Here's how it works: The error type is accessed by the **std::Error**, and the **std::Error** is a trait. Meaning no data, no fields, which makes it an object without data, since the standard identifications from the **std::Error** can be used to access the data from the custom Error type. The **```Box<dyn Error>```** is a very tricky thing. The **Box** is a pointer that is pointing to the parts of the trait object. Trait objects are represented by a fat pointer. The fat pointer has two parts: the data pointer and the vtable pointer. The vtable is the table that has all the trait methods that a trait is implementing or inheriting/deriving. It is roughly equivalent to the pure abstract class full of virtual functions in C++. As it is visible, the data part is not known at compile time, and the vtable part is known. To solve this, the compiler recognizes the **dyn** keyword as dynamic dispatch and leaves the data part resolution to the runtime.
 
+Here is the code that allows to handle different types of data through the Result return. 
 ```Rust
 Result<YamlData, Box<dyn std::error::Error>>
 ```
 
-The official documentation on this part is a bit deficient and unclear. So you might exactly as me strugle through the information gathering process and understanding things. Ine the next parts I will try to define the problems and the ideas behind the construction of syntax.
+The official documentation on this part is a bit deficient and unclear. So you might exactly as me strugle through the information gathering process and understanding things. In the next parts I will try to define the problems and the ideas behind the construction of syntax.
 
 ## Fat pointer diagram
 
@@ -265,7 +302,7 @@ fn read_yaml_file_fail_4(file: File) -> Result<YamlData, serde_yaml::Error> {
     let reader = std::io::BufReader::new(file);
     let yaml_data: YamlData = serde_yaml::from_reader(reader)?;
     Ok(yaml_data) // TODO learn OK return explanation 
-    //Ok(()) //you cannot return unit since the yaml_data is expected, again error[E0308]: mismatched types
+    //Ok(()) //you cannot return unit since the yaml_data is expected, error[E0308]: mismatched types
 }
 ```
 
@@ -335,3 +372,6 @@ https://fettblog.eu/rust-enums-wrapping-errors/
 Sized trait and concepts
 https://doc.rust-lang.org/nightly/std/marker/trait.Sized.html
 https://huonw.github.io/blog/2015/01/the-sized-trait/
+
+Error handling and propagation
+https://fettblog.eu/rust-enums-wrapping-errors/
