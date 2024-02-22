@@ -53,8 +53,9 @@ error[E0277]: the trait bound `Result<File, std::io::Error>: std::io::Read` is n
      = note: required for `BufReader<Result<File, std::io::Error>>` to implement `std::io::Read`
 ```
 
+The code attempts to return a **```Result<File, std::io::Error>```** from the match expression, which can produce either an error or success. However, the error returned by **serde_yaml::from_reader** is of type **serde_yaml::Error**, not **std::io::Error**. The error message accurately identifies the location and nature of the type mismatch, but its suggested solution is misleading.
+
 ```rust
-//fn read_yaml_file_optimal(filename: &str) -> Result<serde_yaml::Value, Result<YamlData, serde_yaml::Error>> {
 fn read_yaml_file_optimal(filename: &str) -> Result<YamlData, serde_yaml::Error> {
     // Read file content
     let yaml_content = fs::read_to_string(filename)?;
@@ -68,10 +69,10 @@ fn read_yaml_file_optimal(filename: &str) -> Result<YamlData, serde_yaml::Error>
 error[E0277]: `?` couldn't convert the error to `serde_yaml::Error`
   --> src\main.rs:38:52
    |
-36 | fn read_yaml_file_optimal(filename: &str) -> Result<YamlData, serde_yaml::Error> {
+   | fn read_yaml_file_optimal(filename: &str) -> Result<YamlData, serde_yaml::Error> {
    |                                              ----------------------------------- expected `serde_yaml::Error` because of this
-37 |     // Read file content
-38 |     let yaml_content = fs::read_to_string(filename)?;
+   |     // Read file content
+   |     let yaml_content = fs::read_to_string(filename)?;
    |                                                    ^ the trait `From<std::io::Error>` is not implemented for `serde_yaml::Error`
    |
    = note: the question mark operation (`?`) implicitly performs a conversion on the error value using the `From` trait
@@ -79,6 +80,7 @@ error[E0277]: `?` couldn't convert the error to `serde_yaml::Error`
              <serde_yaml::Error as From<serde_yaml::libyaml::error::Error>>
              <serde_yaml::Error as From<serde_yaml::libyaml::emitter::Error>>
 ```
+The error message **error[E0277]: ? couldn't convert the error to serde_yaml::Error** occurs because the question mark operator (**?**) in the code is attempting to convert the error type to **serde_yaml::Error**, but the conversion is not possible. Specifically, in the given code, the **fs::read_to_string** function is expected to return a **```Result<YamlData, serde_yaml::Error>```**, but it returns a **```Result<YamlData, std::io::Error>```** instead. The compiler notes that the **```From<std::io::Error>```** trait is not implemented for **serde_yaml::Error**, which prevents the automatic conversion. The help message suggests alternative types that implement the **From<T>** trait, but they do not resolve the immediate issue with the conversion from **std::io::Error** to **serde_yaml::Error**. In this case the compiler is not misleading, and it is easy to deduce that we need asolution for the return value.
 
 Just to dissect types of errors that the program will encounter. The first is the file I/O. For example, if the file does not exist, the drive is not accessible, or the operating system doesn't let us access the directory, or some other problem arises. The other issue can be that the YAML file is parsed by the serde crate (Serde -> short for serialization deserialization) while reading/parsing the YAML file. For example, the format doesn't fit, or there are values that don't comply, or any other problems. The issue is that we have to then propagate the error for the user to see or the system to automatically break off and notify the user.
 
