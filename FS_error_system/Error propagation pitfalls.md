@@ -323,7 +323,7 @@ fn read_yaml_file_fail_2(file: File) -> Result<YamlData, serde_yaml::Error> {
     Ok(yaml_data) // TODO learn OK return explanation 
     //Ok(()) //you cannot return unit since the yaml_data is expected, again error[E0308]: mismatched types
 }
-``` 
+
 
 fn read_yaml_file_fail_3(file: File) -> Result<YamlData, serde_yaml::Error> {
     let reader = std::io::BufReader::new(file);
@@ -339,6 +339,7 @@ fn read_yaml_file_fail_3(file: File) -> Result<YamlData, serde_yaml::Error> {
     Ok(yaml_data) // TODO learn OK return explanation 
     //Ok(()) //you cannot return unit since the yaml_data is expected
 }
+``` 
 
 # The ultimate solution for error propagation
 ```rust
