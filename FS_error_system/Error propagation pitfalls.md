@@ -18,6 +18,68 @@ enum Result<T, E> {
 
 Okay, I understood the **Result** type as a return type. But I want to read and parse a file. Let's take a look at reading and parsing, so 2 different types of errors are possible. I think I need something like generics, akin to templates in C++? Ah, that makes sense; the Enums in the **Result** type are generics, and through them, I just send the types back. Okay, they don't have a simple way to propagate them out, but it still works. This seems simple enough (boy, am I wrong), more on that later. The main example is in this repository, and the situation is that we have a single YAML file that we want to read. I am going to formalize and summarize my research or learning on these subjects, and yes, subjects. The previous discussion was just a taste of what is happening in the code in-depth and what needs to be done.
 
+```rust
+//The error is that the 
+fn read_yaml_file_fail_2(filename: &str) -> Result<YamlData, serde_yaml::Error> {
+    let file_res = match File::open(filename) {
+        Ok(file) => Ok(file),
+        Err(err) => Err(err),
+    };
+
+    let reader = std::io::BufReader::new(file_res);
+    let yaml_data = match serde_yaml::from_reader(reader) {
+        Ok(yaml_data) => yaml_data,
+        //Err(err) => Err(err),
+        Err(err) =>
+        {
+            //return Err("Error reading yaml file please check the file.".into());
+            return Err(err);// Convert the error to the appropriate type, 
+        }
+    };
+
+    Ok(yaml_data) // TODO learn OK return explanation 
+}
+
+
+error[E0277]: the trait bound `Result<File, std::io::Error>: std::io::Read` is not satisfied
+    --> src\main.rs:63:51
+     |
+     |     let yaml_data = match serde_yaml::from_reader(reader) {
+     |                           ----------------------- ^^^^^^ the trait `std::io::Read` is not implemented for `Result<File, std::io::Error>`
+     |                           |
+     |                           required by a bound introduced by this call
+     |
+     = help: the trait `std::io::Read` is implemented for `BufReader<R>`
+     = note: required for `BufReader<Result<File, std::io::Error>>` to implement `std::io::Read`
+```
+
+```rust
+//fn read_yaml_file_optimal(filename: &str) -> Result<serde_yaml::Value, Result<YamlData, serde_yaml::Error>> {
+fn read_yaml_file_optimal(filename: &str) -> Result<YamlData, serde_yaml::Error> {
+    // Read file content
+    let yaml_content = fs::read_to_string(filename)?;
+
+    // Parse YAML content
+    let yaml_guess_list = serde_yaml::from_str(&yaml_content)?;
+
+    Ok(yaml_guess_list)
+}
+
+error[E0277]: `?` couldn't convert the error to `serde_yaml::Error`
+  --> src\main.rs:38:52
+   |
+36 | fn read_yaml_file_optimal(filename: &str) -> Result<YamlData, serde_yaml::Error> {
+   |                                              ----------------------------------- expected `serde_yaml::Error` because of this
+37 |     // Read file content
+38 |     let yaml_content = fs::read_to_string(filename)?;
+   |                                                    ^ the trait `From<std::io::Error>` is not implemented for `serde_yaml::Error`
+   |
+   = note: the question mark operation (`?`) implicitly performs a conversion on the error value using the `From` trait
+   = help: the following other types implement trait `From<T>`:
+             <serde_yaml::Error as From<serde_yaml::libyaml::error::Error>>
+             <serde_yaml::Error as From<serde_yaml::libyaml::emitter::Error>>
+```
+
 Just to dissect types of errors that the program will encounter. The first is the file I/O. For example, if the file does not exist, the drive is not accessible, or the operating system doesn't let us access the directory, or some other problem arises. The other issue can be that the YAML file is parsed by the serde crate (Serde -> short for serialization deserialization) while reading/parsing the YAML file. For example, the format doesn't fit, or there are values that don't comply, or any other problems. The issue is that we have to then propagate the error for the user to see or the system to automatically break off and notify the user.
 
 How to handle them. This code represents the example of which types can be returned. As we can see, there are 2 types of errors.
@@ -59,18 +121,24 @@ Reviewing this code, I personally believe that it could be improved to handle th
 
 #### Option two
 
-In the typical scenario in C++, handling exceptions on the spot or returning through templated functions would suffice. We open the file and process the YAML file or whichever file we have. Here we face a problem, the Oopen file function can fail, and the parse Yaml file can also fail. The challenge lies in returning the error out of this functions. We need to handle both types through a generic type. This generic type corresponds to the **Err** part of the **```Result<Ok, Err>```** type. But how do we return it? 
-In Rust, there are some fundamental rules. The type's size should be known at compile time. Also there is the criteria of monomorphoisation, from the compiler book [link](https://rustc-dev-guide.rust-lang.org/backend/monomorph.html) : 
+In the typical scenario in C++, handling exceptions on the spot or returning through templated functions would suffice. We open the file and process the YAML file or whichever file we have. Here, we face a problem: the open file function can fail, and the parse YAML file can also fail. The challenge lies in returning the error out of these functions. We need to handle both types through a generic type. This generic type corresponds to the **Err** part of the **```Result<Ok, Err>```** type. But how do we return it?
+
+In Rust, there are some fundamental rules. The type's size should be known at compile time. Also, there is the criteria of monomorphization, from the compiler book [link](https://rustc-dev-guide.rust-lang.org/backend/monomorph.html) :
 
 > "Rust takes a different approach: it monomorphizes all generic types. This means that compiler stamps out a different copy of the code of a generic function for each concrete type needed."
 
-However, that's just half of the story. Actually, the size should also be known. After some research, one way to return an unknown size type back to the caller function is through **```Box<dyn Error>```** in Rust. But wait, what is **```Box<dyn Error>```**? Weren't we just aiming to return a **Result** type? How did we get from **```Err<T>```** to **```Box<dyn Error>```**?
+##### Understanding Trait Objects and Error Handling in Rust
 
-Well, welcome to reality. The **```Result<Ok, Err>```** returns either one or the other; they are generics, by the way, and the **Err** needs a type specification and size specification known at compile time. Since this is not the case here until runtime, we need to work around all of these problems. All of this introduces something called the trait object. We have to work with a **```Box<dyn Error>```** that is a trait object. Trait objects, which are references to types that implement a certain trait, do not have a size known at compile time. Therefore, they are unsized. To work with trait objects, Rust requires a reference (**&**) or a smart pointer like **Box** or **Arc** (I got this somewhere).
+In Rust, returning an unknown-size type back to the caller function poses a challenge. One approach is through **```Box<dyn Error>```**, but what exactly is **```Box<dyn Error>```** and how does it relate to **Result**?
 
-Here's how it works: The error type is accessed by the **std::Error**, and the **std::Error** is a trait. Meaning no data, no fields, which makes it an object without data, since the standard identifications from the **std::Error** can be used to access the data from the custom Error type. The **```Box<dyn Error>```** is a very tricky thing. The **Box** is a pointer that is pointing to the parts of the trait object. Trait objects are represented by a fat pointer. The fat pointer has two parts: the data pointer and the vtable pointer. The vtable is the table that has all the trait methods that a trait is implementing or inheriting/deriving. It is roughly equivalent to the pure abstract class full of virtual functions in C++. As it is visible, the data part is not known at compile time, and the vtable part is known. To solve this, the compiler recognizes the **dyn** keyword as dynamic dispatch and leaves the data part resolution to the runtime.
+In Rust, **```Result<Ok, Err>```** returns either one or the other; they are generics, and Err requires type and size specifications known at compile time. To handle this, Rust introduces trait objects, like **```Box<dyn Error>```**. Trait objects are references to types that implement a certain trait, but they have no known size at compile time.
 
-Here is the code that allows to handle different types of data through the Result return. 
+To work with trait objects, Rust utilizes references (**&**) or smart pointers like **Box** or **Arc**. The error type is accessed through std::Error, which is a trait representing error-handling capabilities without data fields.
+
+**```Box<dyn Error>```** acts as a pointer to parts of the trait object, represented by a fat pointer containing data and vtable pointers. While the vtable contains trait methods, the data part's size is unknown until runtime. To resolve this, Rust's compiler employs dynamic dispatch with the dyn keyword, allowing runtime resolution of trait object sizes.
+
+In summary, **```Box<dyn Error>```** is a powerful tool for handling errors of unknown size, enabling effective error management and propagation in Rust applications.
+
 ```Rust
 Result<YamlData, Box<dyn std::error::Error>>
 ```
@@ -306,6 +374,8 @@ fn read_yaml_file_fail_4(file: File) -> Result<YamlData, serde_yaml::Error> {
     //Ok(()) //you cannot return unit since the yaml_data is expected, error[E0308]: mismatched types
 }
 ```
+
+
 
 
 //It returns a Result<User, Box<dyn Error>>, indicating that it can either 
