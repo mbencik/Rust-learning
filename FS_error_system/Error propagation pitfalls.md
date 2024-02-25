@@ -216,13 +216,94 @@ In summary, **```Box<dyn Error>```** is used for owning errors and transferring 
 
 ## Some standard mishaps with the code 
 
+```rust
+
+fn read_yaml_file_fail_2(file: File) -> Result<YamlData, serde_yaml::Error> {
+    let reader = std::io::BufReader::new(file);
+    let yaml_data = match serde_yaml::from_reader(reader) {
+        Ok(yaml_data) => yaml_data,
+        //Err(err) => Err(err),
+        Err(err) =>
+        {
+            return Err(err);// Convert the error to the appropriate type, 
+        }
+    }
+    
+    //Ok(()) //you cannot return unit since the yaml_data is expected, again error[E0308]: mismatched types
+}
+``` 
+
+
+```rust
+fn read_yaml_file_fail_3(file: File) -> Result<YamlData, serde_yaml::Error> {
+    let reader = std::io::BufReader::new(file);
+    let yaml_data = match serde_yaml::from_reader(reader) {
+        Ok(yaml_data) => yaml_data,
+        //Err(err) => Err(err),
+        Err(err) =>
+        {
+            return Err(err);// Convert the error to the appropriate type, 
+        }
+    };
+    
+    Ok(yaml_data)
+    //Ok(()) //you cannot return unit since the yaml_data is expected
+}
+``` 
+
 ### Problems with syntax and compiler 
  
 #### Compiler misleading
 
-OK and no semicollo or semi colon
+Because Ok(yaml_data) is missing, the compiler assumes that the return procedure is returning the wrong type or unit, causing a mismatched types error.
 
-explanation how the rust compiler is capable only to check for a spacific block of errors and stops at a error
+```rust
+fn read_yaml_file_fail_1(file: File) -> Result<YamlData, serde_yaml::Error> {
+    let reader = std::io::BufReader::new(file);
+    match serde_yaml::from_reader(reader) {
+        Ok(yaml_data) => Ok(yaml_data), // Return yaml_data if deserialization succeeds
+        Err(err) => {
+            return Err(err); // Convert the error to the appropriate type and return
+        }
+    };
+}
+```
+The compiler encounters an issue because there is no return in this case since there is a semicolon at the end of the match. This results in a mismatched types error.
+
+```rust
+error[E0308]: mismatched types
+--> src\main.rs:69:41
+|
+69 | fn read_yaml_file_fail_1(file: File) -> Result<YamlData, serde_yaml::Error> {
+|    ---------------------                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected `Result<YamlData, Error>`, found `()`
+|    |
+|    implicitly returns `()` as its body has no tail or `return` expression
+...
+79 |     };
+|      - help: remove this semicolon to return this value
+|
+= note:   expected enum `Result<YamlData, serde_yaml::Error>`
+        found unit type `()`
+```   
+
+Corrected function
+
+```rust
+fn read_yaml_file_fail_1(file: File) -> Result<YamlData, serde_yaml::Error> {
+    let reader = std::io::BufReader::new(file);
+    match serde_yaml::from_reader(reader) {
+        Ok(yaml_data) => Ok(yaml_data), // Return yaml_data if deserialization succeeds
+        Err(err) => {
+            return Err(err); // Convert the error to the appropriate type and return
+        }
+    } // Removed the semicolon to properly return the value
+}
+```  
+
+The entire situation is misleading because the issue lies in the absence of the return value. This can be rectified by either removing the final semicolon or appending **Ok(yaml_data)** at the end.
+
+
+
 
 #### Mesage incomprehensible
 
@@ -268,105 +349,9 @@ Here is one possible error.
 
 // shadowed variable nonsense and no return
 
-https://joshleeb.com/posts/rust-traits-and-trait-objects/
-https://www.reddit.com/r/rust/comments/vzq6pd/is_boxstderrerror_acceptable/
-https://betterprogramming.pub/rust-basics-structs-methods-and-traits-bb4839cd57bd
 
 
 
-
-When File::open fails, we use Err(Box::new(err)) to wrap the concrete error 
-into a Box<dyn StdError>. This allows us to return a trait object that 
-implements the Error trait, enabling us to handle different error types uniformly.
-
-```rust
-fn open_file(filename: &str) -> Result<File, Box<dyn StdError>> {
-    match File::open(filename) {
-        Ok(file) => Ok(file),
-        Err(err) => Err(Box::new(err)),
-    }
-}
-
-fn open_file_1(filename: &str) -> Result<File, io::Error> {
-    match File::open(filename) {
-        Ok(file) => Ok(file),
-        Err(err) => Err(err),
-    }
-}
-```
-
-
-Because the Ok(yaml_data) is missing, the compiler assumes that the return procedure
-is returning the wrong type or unit, causing a mismatched types error.
-
-```rust
-fn read_yaml_file_fail_1(file: File) -> Result<YamlData, serde_yaml::Error> {
-    let reader = std::io::BufReader::new(file);
-    match serde_yaml::from_reader(reader) {
-        Ok(yaml_data) => Ok(yaml_data), // Return yaml_data if deserialization succeeds
-        Err(err) => {
-            return Err(err); // Convert the error to the appropriate type and return
-        }
-    };
-}
-```
-The compiler has no return in this case since there is a semicolon at the end of the match.
-This causes a mismatched types error.
-
-```rust
-error[E0308]: mismatched types
---> src\main.rs:69:41
-|
-69 | fn read_yaml_file_fail_1(file: File) -> Result<YamlData, serde_yaml::Error> {
-|    ---------------------                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected `Result<YamlData, Error>`, found `()`
-|    |
-|    implicitly returns `()` as its body has no tail or `return` expression
-...
-79 |     };
-|      - help: remove this semicolon to return this value
-|
-= note:   expected enum `Result<YamlData, serde_yaml::Error>`
-        found unit type `()`
-```   
-
-
-
-Missing Ok statement in the end, creates a problem 
-Either the Ok(yaml_data) has to be set at the end as a return or the let yaml_data shadow hats to be removed
-If one moves into the game Ok(yaml_data), tthe march operator gets a ; at the end 
-
-```rust
-fn read_yaml_file_fail_2(file: File) -> Result<YamlData, serde_yaml::Error> {
-    let reader = std::io::BufReader::new(file);
-    let yaml_data = match serde_yaml::from_reader(reader) {
-        Ok(yaml_data) => yaml_data,
-        //Err(err) => Err(err),
-        Err(err) =>
-        {
-            return Err(err);// Convert the error to the appropriate type, 
-        }
-    }
-    
-    Ok(yaml_data) // TODO learn OK return explanation 
-    //Ok(()) //you cannot return unit since the yaml_data is expected, again error[E0308]: mismatched types
-}
-
-
-fn read_yaml_file_fail_3(file: File) -> Result<YamlData, serde_yaml::Error> {
-    let reader = std::io::BufReader::new(file);
-    let yaml_data = match serde_yaml::from_reader(reader) {
-        Ok(yaml_data) => yaml_data,
-        //Err(err) => Err(err),
-        Err(err) =>
-        {
-            return Err(err);// Convert the error to the appropriate type, 
-        }
-    };
-    
-    Ok(yaml_data) // TODO learn OK return explanation 
-    //Ok(()) //you cannot return unit since the yaml_data is expected
-}
-``` 
 
 # The ultimate solution for error propagation
 ```rust
@@ -467,13 +452,18 @@ fn read_yaml_file_4(file: File) -> Result<YamlData, serde_yaml::Error> {
 ```
 
 
-Source 
+## Sources
 https://fettblog.eu/rust-enums-wrapping-errors/
 
 Sized trait and concepts
 https://doc.rust-lang.org/nightly/std/marker/trait.Sized.html
 https://doc.rust-lang.org/book/ch10-02-traits.html
 https://huonw.github.io/blog/2015/01/the-sized-trait/
+https://joshleeb.com/posts/rust-traits-and-trait-objects/
 
 Error handling and propagation
 https://fettblog.eu/rust-enums-wrapping-errors/
+
+
+Rust error code
+https://doc.rust-lang.org/nightly/error_codes/error-index.html
