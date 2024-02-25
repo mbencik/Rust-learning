@@ -1,12 +1,25 @@
 # Definition of Error Propagation for Rust Beginners
 
-I was trying to learn the basics and get accustomed to Rust code. My idea was to take the guessing game from the tutorial and simply add a file from which I can read words or sentences to make it configurable. I wanted to introduce some modularity to allow for the addition of new guessing sentences. However, I found out that at this point in Rust, this task is anything but easy, and I pretty much landed myself in the more advanced areas of Rust code. 
+## Intro
 
-The definition was simple: a program does something, it fails, or something goes wrong, and it should give you as a programmer a hint about what happened. This looks simple, but in my journey, it turned out to be an obstacle course littered with mines. 
+I was delving into Rust to learn its basics and get accustomed to its code. My aim was to enhance the guessing game from the tutorial by incorporating a file for reading words or sentences, thus making it configurable and introducing modularity for adding new guessing sentences. However, I quickly realized that, at this stage in Rust, this task isn't straightforward and led me into more advanced areas of Rust code.
 
-The current error propagation has turned out to be an exercise in finding one's way in a labyrinth rather than simply reading a file if okay, parsing the file. The main issue turned out to be the Result return. Since I'm a C/C++ engineer, or something like that, I was baffled by the idea that there is a type that has 2 Enums, and they are returned. Now already, the problem begins. In C++, an Enum is a number basically, either assigned by the compiler or given by the user, but in Rust, that is a Struct, a class that is almighty and confusing.
+In this discussion, the focus is on error propagation, error handling, issues with documentation, and problems with explanations.
 
-The first problem: what happens with the error if there is none? So everything went well (for example, read file). A normal result is returned, but to be complete or exhaustive, if I check a Result return, it has Ok and Err, I need to check both. It took me literally half an hour to find what it returns in the case. It returns a unit struct, or in translation, a struct with no data, that is resolved and understood by the compiler. Just to let you know, the Rust compiler is a weird magic thing that resolves all sorts of issues.
+Understanding error handling in Rust is vital. A program should provide clues to programmers when something goes wrong. Despite its apparent simplicity, error handling in Rust can feel like navigating a minefield. It's concerning that beginners encounter advanced Rust features, like file reading and error handling, without adequate guidance or support.
+
+The main challenge lies in the complexity surrounding seemingly simple tasks, such as reading a file and handling potential errors effectively. Whether errors are created on the heap or the stack adds unnecessary complexity, making it difficult for beginners to grasp. Resolving basic file reading errors can take an entire day or longer, which seems disproportionate.
+
+A beginner-friendly solution involves extending the error struct with baseline implementations for common error scenarios. This would simplify error identification and handling. The '?' operator hides error resolution complexities, benefiting beginners but potentially limiting control for advanced users.
+
+This issue isn't isolated to file operations; it extends to scenarios requiring Rust's generics or interfaces, complicating error propagation and handling further.
+
+
+## Basics or error handling
+
+The current error propagation has turned out to be an exercise in finding one's way in a labyrinth rather than simply reading a file if okay, parsing the file. The main issue turned out to be the Result return. Since I'm a C/C++ engineer, or something like that, I was baffled by the idea that there is a type that has 2 Enums, and they are returned. In C++ there are templates for that kind of behavior. Now already, the problems begins. In C++, an Enum is a number basically, either assigned by the compiler or given by the user, but in Rust, that is a Struct, a class that is almighty and confusing.
+
+Let's dissect the basic problems. The first problem: what happens with the error if there is none? So everything went well (for example, read file). A normal result is returned, but to be complete or exhaustive, if I check a Result return, it has Ok and Err, I need to check both. It took me literally half an hour to find what it returns in the case. It returns a unit struct, or in translation, a struct with no data, that is resolved and understood by the compiler. Just to let you know, the Rust compiler is a weird magic thing that resolves all sorts of issues.
 
 But why does one make a struct out of an Enum? Enum should be simple, easy, a number connected to a label in the code, done. So to sort out the enum that is a struct, and so-called unit struct in cases that one needs all the time, one needs pretty good knowledge of what the compiler will do. Otherwise, it is difficult to figure out what the compiler does automagically and what logic has to be done by the user.
 
@@ -39,7 +52,7 @@ fn read_yaml_file_fail_2(filename: &str) -> Result<YamlData, serde_yaml::Error> 
         }
     };
 
-    Ok(yaml_data) // TODO learn OK return explanation 
+    Ok(yaml_data)
 }
 
 
@@ -202,12 +215,11 @@ In summary, **```Box<dyn Error>```** is used for owning errors and transferring 
 
 
 
-|||||||<  We would need to identify which error type it is, cast the inner trait preferably to a struct (no idea if that is possible, probably trait should not be upgraded), which is probably impossible. That means either from outside reimplement the needed functions (to figure out parse the errors) to actually read the internal fields of the custom error. This makes the whole thing a bit top-heavy and full of overhead, and that is a bit of a problem.
+|||||||<  
+
+
 The main issue of it all is that a simple procedure that should actually just give you the option to read something (file), propagate the error, and handle the error properly. One more thing is the error in the end created on the heap or is created on the stack (is so overcomplicated that it's almost unbelievable)? Go find out this so you know. This is, for example, for a beginner, very difficult to comprehend. Why does he need to resolve this many problems with just one tiny problem? Why does it take a full day or longer to resolve the problem of propagating and visualizing an error? He just wanted to open a file and propagate an error if it fails. A much better process would be if the error struct that is a trait extension extends its implementation so there is an option that we use the error rate and you have a bare-bone error trait like now and that stays as is, but there is an error class that has baseline implementations of the error trait. This can be used to identify what kind of error it is. That is why the '?' was introduced to hide the complexities of the implementation and match-making to resolve the errors. Which is great for beginners but bad for people that want more control and clear practices how to handle error propagation.
 The bad part is that this problem would extend to any type in the Rust realm where we need generics, basically or interfaces, abstract features to send such common data out.
-
-
-In this document the goal is to adress the error propagation, error handling, nonsense with the documentation and problems with the explanations.
 
 
 
@@ -215,7 +227,6 @@ First the
 
 https://joshleeb.com/posts/rust-traits-and-trait-objects/
 https://www.reddit.com/r/rust/comments/vzq6pd/is_boxstderrerror_acceptable/
-https://doc.rust-lang.org/book/ch10-02-traits.html
 https://betterprogramming.pub/rust-basics-structs-methods-and-traits-bb4839cd57bd
 
 ```rust
@@ -449,6 +460,7 @@ https://fettblog.eu/rust-enums-wrapping-errors/
 
 Sized trait and concepts
 https://doc.rust-lang.org/nightly/std/marker/trait.Sized.html
+https://doc.rust-lang.org/book/ch10-02-traits.html
 https://huonw.github.io/blog/2015/01/the-sized-trait/
 
 Error handling and propagation
