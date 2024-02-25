@@ -1,6 +1,8 @@
 # Definition of Error Propagation for Rust Beginners
 
-The definition is simple: a program does something, it fails, or something goes wrong, and it should give you as a programmer a hint about what happened. This looks simple, but in my journey, it turned out to be an obstacle course littered with mines.
+I was trying to learn the basics and get accustomed to Rust code. My idea was to take the guessing game from the tutorial and simply add a file from which I can read words or sentences to make it configurable. I wanted to introduce some modularity to allow for the addition of new guessing sentences. However, I found out that at this point in Rust, this task is anything but easy, and I pretty much landed myself in the more advanced areas of Rust code. 
+
+The definition was simple: a program does something, it fails, or something goes wrong, and it should give you as a programmer a hint about what happened. This looks simple, but in my journey, it turned out to be an obstacle course littered with mines. 
 
 The current error propagation has turned out to be an exercise in finding one's way in a labyrinth rather than simply reading a file if okay, parsing the file. The main issue turned out to be the Result return. Since I'm a C/C++ engineer, or something like that, I was baffled by the idea that there is a type that has 2 Enums, and they are returned. Now already, the problem begins. In C++, an Enum is a number basically, either assigned by the compiler or given by the user, but in Rust, that is a Struct, a class that is almighty and confusing.
 
