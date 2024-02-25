@@ -129,15 +129,22 @@ In Rust, there are some fundamental rules. The type's size should be known at co
 
 > "Rust takes a different approach: it monomorphizes all generic types. This means that compiler stamps out a different copy of the code of a generic function for each concrete type needed."
 
-##### Explanation of the dyn keyword, dynamic dispatch, sized trait and static dispatch
+##### Explanation of the dyn keyword, dynamic dispatch, sized and trait objects
 
 Returning an unknown-size type in Rust presents a challenge. One approach is to use **```Box<dyn Error>```**. But what exactly is **```Box<dyn Error>```** and its relation to Result?
 
 In Rust, **```Result<Ok, Err>```** represents either success or failure. The Err variant requires type and size specifications at compile time. To handle this, Rust introduces trait objects like **```Box<dyn Error>```**. These are references to types implementing a trait, but their size isn't known at compile time.
 
+In Rust, a trait object is created by combining the dyn keyword with a trait name, like **dyn MyTrait**. It represents any type that implements the specified trait. Trait objects allow you to treat different types that implement the same trait as interchangeable.
 To work with trait objects, Rust uses references (**&**) or smart pointers like **Box** or **Arc**. **```Box<dyn Error>```** acts as a pointer to parts of the trait object, represented by a fat pointer containing data and vtable pointers. While the vtable contains trait methods, the data part's size is unknown until runtime. Rust's compiler employs dynamic dispatch with the dyn keyword to resolve this at runtime. Sized types offer flexibility, as the compiler can manipulate them directly. Placing an unsized type behind a pointer makes it sized. Box<Trait> allows handling a trait object like a normal value, ensuring sizedness without changing ownership semantics.
 
-In summary, **```Box<dyn Error>```** is a powerful tool for handling errors of unknown size, facilitating effective error management and propagation in Rust applications.
+For example, suppose you have a trait called Drawable with a method **draw(&self)**. You can create a trait object dyn Drawable that can hold any type implementing the Drawable trait. This allows you to call the draw method on any object that implements Drawable, regardless of its concrete type.
+
+Trait objects are useful in scenarios where you need to work with different types in a polymorphic way, such as creating collections of objects with different concrete types but similar behavior.
+
+Trait objects in Rust present a way to work with different types through a common interface provided by a trait. The **dyn** keyword is used to denote that a type is a trait object, allowing for dynamic dispatch and polymorphic behavior at runtime.
+
+In our example **```Box<dyn Error>```** is a tool for handling errors of unknown size, facilitating effective error management and propagation in Rust applications.
 
 ```Rust
 Result<YamlData, Box<dyn std::error::Error>>
