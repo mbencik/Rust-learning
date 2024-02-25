@@ -129,23 +129,20 @@ In Rust, there are some fundamental rules. The type's size should be known at co
 
 > "Rust takes a different approach: it monomorphizes all generic types. This means that compiler stamps out a different copy of the code of a generic function for each concrete type needed."
 
-##### Understanding Trait Objects and Error Handling in Rust
+##### Explanation of the dyn keyword, dynamic dispatch, sized trait and static dispatch
 
-In Rust, returning an unknown-size type back to the caller function poses a challenge. One approach is through **```Box<dyn Error>```**, but what exactly is **```Box<dyn Error>```** and how does it relate to **Result**?
+Returning an unknown-size type in Rust presents a challenge. One approach is to use **```Box<dyn Error>```**. But what exactly is **```Box<dyn Error>```** and its relation to Result?
 
-In Rust, **```Result<Ok, Err>```** returns either one or the other; they are generics, and Err requires type and size specifications known at compile time. To handle this, Rust introduces trait objects, like **```Box<dyn Error>```**. Trait objects are references to types that implement a certain trait, but they have no known size at compile time.
+In Rust, **```Result<Ok, Err>```** represents either success or failure. The Err variant requires type and size specifications at compile time. To handle this, Rust introduces trait objects like **```Box<dyn Error>```**. These are references to types implementing a trait, but their size isn't known at compile time.
 
-To work with trait objects, Rust utilizes references (**&**) or smart pointers like **Box** or **Arc**. The error type is accessed through std::Error, which is a trait representing error-handling capabilities without data fields.
+To work with trait objects, Rust uses references (**&**) or smart pointers like **Box** or **Arc**. **```Box<dyn Error>```** acts as a pointer to parts of the trait object, represented by a fat pointer containing data and vtable pointers. While the vtable contains trait methods, the data part's size is unknown until runtime. Rust's compiler employs dynamic dispatch with the dyn keyword to resolve this at runtime. Sized types offer flexibility, as the compiler can manipulate them directly. Placing an unsized type behind a pointer makes it sized. Box<Trait> allows handling a trait object like a normal value, ensuring sizedness without changing ownership semantics.
 
-**```Box<dyn Error>```** acts as a pointer to parts of the trait object, represented by a fat pointer containing data and vtable pointers. While the vtable contains trait methods, the data part's size is unknown until runtime. To resolve this, Rust's compiler employs dynamic dispatch with the dyn keyword, allowing runtime resolution of trait object sizes.
-
-In summary, **```Box<dyn Error>```** is a powerful tool for handling errors of unknown size, enabling effective error management and propagation in Rust applications.
+In summary, **```Box<dyn Error>```** is a powerful tool for handling errors of unknown size, facilitating effective error management and propagation in Rust applications.
 
 ```Rust
 Result<YamlData, Box<dyn std::error::Error>>
 ```
-
-The official documentation on this part is a bit deficient and unclear. So you might exactly as me strugle through the information gathering process and understanding things. In the next parts I will try to define the problems and the ideas behind the construction of syntax.
+The official documentation on this topic can be unclear, leading to confusion. In the following sections, we'll delve into the problems and ideas behind the syntax construction. So you might exactly as me strugle through the information gathering process and understanding things. In the next parts I will try to define the problems and the ideas behind the construction of syntax.
 
 ## Fat pointer diagram
 
@@ -193,9 +190,7 @@ In summary, **```Box<dyn Error>```** is used for owning errors and transferring 
 
 ![alt text](https://github.com/mbencik/Rust-learning/blob/main/FS_error_system/Images/Rust_pointers_explanation.jpg)
 
-### Explanation of the dyn keyword, dynamic dispatch, sized trait and static dispatch
 
-In the Rust documentation on compile time known sizes I encountered that this is a pritty important concept in Rust. In the Rust documentation [link](https://doc.rust-lang.org/nightly/std/marker/trait.Sized.html) the sized is a trait marker. In one fo the sources it is said "sized is a compiler built-in trait", I dont know about that but it is a trait that does not have to be expllicitly derived and the compiler will still know the size of the object type at compile time. A type is considered sized if the precise size of a value of type is known and fixed at compile time once the real types of the type parameters are known (i.e. after completing monomorphisation).
 
 
 |||||||<  We would need to identify which error type it is, cast the inner trait preferably to a struct (no idea if that is possible, probably trait should not be upgraded), which is probably impossible. That means either from outside reimplement the needed functions (to figure out parse the errors) to actually read the internal fields of the custom error. This makes the whole thing a bit top-heavy and full of overhead, and that is a bit of a problem.
