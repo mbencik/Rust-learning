@@ -130,7 +130,7 @@ fn read_yaml_file_fail_2(file: File) -> Result<YamlData, serde_yaml::Error> {
         }
     }
     
-    Ok(yaml_data) // TODO learn OK return explanation 
+    Ok(yaml_data) // 
 }
 ``` 
 Reviewing this code, I personally believe that it could be improved to handle the errors more efficiently. It seems like the current implementation could be simplified to handle all cases within a single function, without any issues.
@@ -187,6 +187,8 @@ fn produce_error() -> Box<dyn Error> {
     Box::new(std::io::Error::new(std::io::ErrorKind::NotFound, "File not found"))
 }
 ```
+The code **```Box::new(std::io::Error::new(std::io::ErrorKind::NotFound, "File not found"))```** creates a new instance of the **```std::io::Error```** struct with the specified error kind (in this case, **```std::io::ErrorKind::NotFound```**) and error message ("File not found"). The **Box::new** function is used to box the error instance, allocating it on the heap and returning a pointer to the boxed error. This boxed error can be returned from functions or passed around as needed, allowing for consistent error handling in Rust. This is basically how the heap allocations happen.
+
 
 **```&mut dyn Error```** is a mutable reference to an object that implements the Error trait.
 It does not own the underlying data; it borrows it mutably.
@@ -212,46 +214,35 @@ In summary, **```Box<dyn Error>```** is used for owning errors and transferring 
 
 ![alt text](https://github.com/mbencik/Rust-learning/blob/main/FS_error_system/Images/Rust_pointers_explanation.jpg)
 
+## Some standard mishaps with the code 
+
+### Problems with syntax and compiler 
+ 
+#### Compiler misleading
+
+OK and no semicollo or semi colon
+
+explanation how the rust compiler is capable only to check for a spacific block of errors and stops at a error
+
+#### Mesage incomprehensible
 
 
 
-|||||||<  
-
-
-The main issue of it all is that a simple procedure that should actually just give you the option to read something (file), propagate the error, and handle the error properly. One more thing is the error in the end created on the heap or is created on the stack (is so overcomplicated that it's almost unbelievable)? Go find out this so you know. This is, for example, for a beginner, very difficult to comprehend. Why does he need to resolve this many problems with just one tiny problem? Why does it take a full day or longer to resolve the problem of propagating and visualizing an error? He just wanted to open a file and propagate an error if it fails. A much better process would be if the error struct that is a trait extension extends its implementation so there is an option that we use the error rate and you have a bare-bone error trait like now and that stays as is, but there is an error class that has baseline implementations of the error trait. This can be used to identify what kind of error it is. That is why the '?' was introduced to hide the complexities of the implementation and match-making to resolve the errors. Which is great for beginners but bad for people that want more control and clear practices how to handle error propagation.
-The bad part is that this problem would extend to any type in the Rust realm where we need generics, basically or interfaces, abstract features to send such common data out.
-
-
-
-First the 
-
-https://joshleeb.com/posts/rust-traits-and-trait-objects/
-https://www.reddit.com/r/rust/comments/vzq6pd/is_boxstderrerror_acceptable/
-https://betterprogramming.pub/rust-basics-structs-methods-and-traits-bb4839cd57bd
+#### Misleading syntax and compiler nonsense
 
 ```rust
+use std::fs::File;
+use std::io::{BufReader, BufRead};
+use serde_yaml;
 use std::error::Error as StdError;
-
 
 #[derive(Debug, Serialize, Deserialize)]
 struct YamlData {
     sentences: Vec<String>,
 }
 
-//TODO Separate the file open and deserialization of yaml, othervise I have to solve the problem with 2 different errors
 fn read_yaml_file(filename: &str) -> Result<YamlData, Box<dyn StdError>> {
-
-    let yaml_content = fs::read_to_string(filename).expect("Failed to read file");
-    let yaml_guess_list: serde_yaml::Value = serde_yaml::from_str(&yaml_content).expect("Failed to parse YAML");
-
-    let f = std::fs::File::open(filename).expect("Could not open file.");
-    let reader = BufReader::new(f);
-    let yaml_guess_list_strings:YamlData = serde_yaml::from_reader(reader).expect("Could not read values.");
-    println!("deserialized = {:?}", yaml_guess_list);
-    println!("deserialized 2 = {:?}", yaml_guess_list_strings);
-
-
-    // Open the YAML file
+    // Open the file and create a reader
     let file = std::fs::File::open(filename)?;
     let reader = BufReader::new(file);
 
@@ -261,6 +252,27 @@ fn read_yaml_file(filename: &str) -> Result<YamlData, Box<dyn StdError>> {
     Ok(yaml_data)
 }
 ```
+
+Here we can see the minimal implementation to read a YAML file. The nonsense here is the naming of the std::io members. BufRead is a trait, and BufReader is a struct that implements BufRead. Once you get used to it, it's not bad, but if you make a syntax mistake, you will not be happy. 
+
+```rust
+error[E0599]: no function or associated item named `new` found for trait `BufRead`
+  --> src\main.rs:51:27
+   |
+51 |     let reader = BufRead::new(file);
+   |                           ^^^ function or associated item not found in `BufRead`
+```
+
+Here is one possible error.
+
+
+// shadowed variable nonsense and no return
+
+https://joshleeb.com/posts/rust-traits-and-trait-objects/
+https://www.reddit.com/r/rust/comments/vzq6pd/is_boxstderrerror_acceptable/
+https://betterprogramming.pub/rust-basics-structs-methods-and-traits-bb4839cd57bd
+
+
 
 
 When File::open fails, we use Err(Box::new(err)) to wrap the concrete error 
