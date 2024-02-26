@@ -1,12 +1,9 @@
-use std::{io, vec};
-use std::fs;
-use std::fs::File;
-use std::io::{BufReader};
+use std::{io, fs, fs::File};
+use std::io::{BufReader, BufRead};
 use std::error::Error as StdError;
 use serde::{Serialize, Deserialize};
 use serde_yaml::*;
 use std::result::Result;
-
 
 #[derive(Debug, Serialize, Deserialize)]
 struct YamlData {
@@ -32,46 +29,39 @@ fn open_file_1(filename: &str) -> Result<File, io::Error> {
     }
 }
 
-//TODO Separate the file open and deserialization of yaml, othervise I have to solve the problem with 2 different errors
+fn read_yaml_file_optimal(filename: &str) -> Result<serde_yaml::Value, Box<dyn StdError>> {
+    // Read file content
+    let yaml_content = fs::read_to_string(filename)?;
+
+    // Parse YAML content
+    let yaml_guess_list = serde_yaml::from_str(&yaml_content)?;
+
+    Ok(yaml_guess_list)
+}
+
 fn read_yaml_file(filename: &str) -> Result<YamlData, Box<dyn StdError>> {
+    // Open the file and create a reader
+    let file = std::fs::File::open(filename)?;
+    let reader = BufReader::new(file);
 
-    let yaml_content = fs::read_to_string(filename).expect("Failed to read file");
-    let yaml_guess_list: serde_yaml::Value = serde_yaml::from_str(&yaml_content).expect("Failed to parse YAML");
+    // Deserialize the YAML content using serde_yaml::from_reader
+    let yaml_data: YamlData = serde_yaml::from_reader(reader)?;
 
-    let f = std::fs::File::open(filename).expect("Could not open file.");
-    let reader = BufReader::new(f);
-    let yaml_guess_list_strings:YamlData = serde_yaml::from_reader(reader).expect("Could not read values.");
-    
-    println!("YAML deserialized to Serde value type = {:?}", yaml_guess_list);
-    println!("YAML deserialized to a vector of strings = {:?}", yaml_guess_list_strings);
-
-    Ok(yaml_guess_list_strings)
+    Ok(yaml_data)
 }
 
 
-/* 
+/*
 //Missing Ok statement in the end, creates a problem 
 //Either the Ok(yaml_data) has to be set at the end as a return or the let yaml_data shadow hats to be removed
-// If one moves into the game Ok(yaml_data), tthe march operator gets a ; at the end 
-fn read_yaml_file_fail_2(file: File) -> Result<YamlData, serde_yaml::Error> {
-    let reader = std::io::BufReader::new(file);
-    let yaml_data = match serde_yaml::from_reader(reader) {
-        Ok(yaml_data) => yaml_data,
-        //Err(err) => Err(err),
-        Err(err) =>
-        {
-            //return Err("Error reading yaml file please check the file.".into());
-            return Err(err);// Convert the error to the appropriate type, 
-        }
-    }
-    
-    //Ok(yaml_data) // TODO learn OK return explanation 
-    //Ok(()) //you cannot return unit since the yaml_data is expected, again error[E0308]: mismatched types
-}
-*/
+//If one moves into the game Ok(yaml_data), the march operator gets a ; at the end 
+fn read_yaml_file_fail_2(filename: &str) -> Result<YamlData, serde_yaml::Error> {
+    let file_res = match File::open(filename) {
+        Ok(file) => Ok(file),
+        Err(err) => Err(err),
+    };
 
-fn read_yaml_file_fail_3(file: File) -> Result<YamlData, serde_yaml::Error> {
-    let reader = std::io::BufReader::new(file);
+    let reader = std::io::BufReader::new(file_res);
     let yaml_data = match serde_yaml::from_reader(reader) {
         Ok(yaml_data) => yaml_data,
         //Err(err) => Err(err),
@@ -81,35 +71,34 @@ fn read_yaml_file_fail_3(file: File) -> Result<YamlData, serde_yaml::Error> {
             return Err(err);// Convert the error to the appropriate type, 
         }
     };
-    //let yaml_data: YamlData = serde_yaml::from_reader(reader)?; // the ultimate solution, but be carefull the ? is a special operator for handling the entire correct incorect result malarky
-    Ok(yaml_data) // as long as this line is there this is the return value
-    //Ok(()) //you cannot return unit since the yaml_data is expected
+
+    //Ok(yaml_data) // TODO learn OK return explanation 
+}
+*/
+
+
+//3 different ways to write the same thing
+fn read_yaml_file_fail_3(file: File) -> Result<YamlData, serde_yaml::Error> {
+    let reader = std::io::BufReader::new(file);
+    let yaml_data = match serde_yaml::from_reader(reader) {
+        Ok(yaml_data) => yaml_data,
+        Err(err) => return Err(err),
+    };
+    Ok(yaml_data)
 }
 
-
-//to avoid the Ok in the end do not shadow the yaml_data in the match expression
-//in this case the Ok(yaml_data) => yaml_data will be transformed into Ok(yaml_data) => Ok(yaml_data)
-// there is no statement Ok in the end since the last curly brace does not have a semi colon and this means implictly that the function ends
 fn read_yaml_file_fail_3_1(file: File) -> Result<YamlData, serde_yaml::Error> {
     let reader = std::io::BufReader::new(file);
     match serde_yaml::from_reader(reader) {
         Ok(yaml_data) => Ok(yaml_data),
-        Err(err) =>
-        {
-            //return Err("Error reading yaml file please check the file.".into());
-            return Err(err);// Convert the error to the appropriate type, 
-        }
+        Err(err) => return Err(err),
     }
-    //let yaml_data: YamlData = serde_yaml::from_reader(reader)?; // the ultimate solution, but be carefull the ? is a special operator for handling the entire correct incorect result malarky
-    //Ok(yaml_data) // TODO learn OK return explanation 
-    //Ok(()) //you cannot return unit since the yaml_data is expected
 }
 
-fn read_yaml_file_fail_4(file: File) -> Result<YamlData, serde_yaml::Error> {
+fn read_yaml_file_fail_3_2(file: File) -> Result<YamlData, serde_yaml::Error> {
     let reader = std::io::BufReader::new(file);
     let yaml_data: YamlData = serde_yaml::from_reader(reader)?;
-    Ok(yaml_data) // TODO learn OK return explanation 
-    //Ok(()) //you cannot return unit since the yaml_data is expected, again error[E0308]: mismatched types
+    Ok(yaml_data)
 }
 
 
@@ -203,10 +192,17 @@ fn main() {
 
     // second filing test to oupen a non existing file 
     //fail_to_openfile_2();
+    //read_yaml_file_fail_2("Hello0");
 
     // shows the build failure in case the correct return from the function is missing
     //read_yaml_file_fail_2();
 
-    let open_file_ret = open_file( "Guess_data.yml");
-    let open_file_ret_1 = open_file_1( "Guess_data.yml");
+    let open_file_Res_Box = open_file( "Guess_data.yml");
+    let open_file_Res_Err = open_file_1( "Guess_data.yml");
+
+
+
+    let yaml_file_res = read_yaml_file( "Guess_data.yml" );
+
+    println!("YAML deserialized to a vector of strings = {:?}", yaml_file_res);
 }
