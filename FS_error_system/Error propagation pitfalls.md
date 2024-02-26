@@ -353,7 +353,7 @@ Here is one possible error.
 
 
 
-# The ultimate solution for error propagation
+## The ultimate solution for error hadling, and compiler handling  
 ```rust
 let yaml_data: YamlData = serde_yaml::from_reader(reader)?;
 ```
@@ -377,16 +377,12 @@ fn read_yaml_file_fail_3_1(file: File) -> Result<YamlData, serde_yaml::Error> {
             return Err(err);// Convert the error to the appropriate type, 
         }
     }
-    //let yaml_data: YamlData = serde_yaml::from_reader(reader)?; // the ultimate solution, but be carefull the ? is a special operator for handling the entire correct incorect result malarky
-    //Ok(yaml_data) // TODO learn OK return explanation 
-    //Ok(()) //you cannot return unit since the yaml_data is expected
 }
 
 fn read_yaml_file_fail_4(file: File) -> Result<YamlData, serde_yaml::Error> {
     let reader = std::io::BufReader::new(file);
     let yaml_data: YamlData = serde_yaml::from_reader(reader)?;
     Ok(yaml_data) // TODO learn OK return explanation 
-    //Ok(()) //you cannot return unit since the yaml_data is expected, error[E0308]: mismatched types
 }
 ```
 
@@ -452,18 +448,18 @@ fn read_yaml_file_4(file: File) -> Result<YamlData, serde_yaml::Error> {
 ```
 
 
-## Sources
+## Sources  
 https://fettblog.eu/rust-enums-wrapping-errors/
 
-Sized trait and concepts
+Sized trait and concepts  
 https://doc.rust-lang.org/nightly/std/marker/trait.Sized.html
 https://doc.rust-lang.org/book/ch10-02-traits.html
 https://huonw.github.io/blog/2015/01/the-sized-trait/
 https://joshleeb.com/posts/rust-traits-and-trait-objects/
 
-Error handling and propagation
+Error handling and propagation  
 https://fettblog.eu/rust-enums-wrapping-errors/
 
 
-Rust error code
+Rust error code  
 https://doc.rust-lang.org/nightly/error_codes/error-index.html
