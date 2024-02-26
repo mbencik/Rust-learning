@@ -402,7 +402,6 @@ fn read_yaml_file_fail_4(file: File) -> Result<YamlData, serde_yaml::Error> {
 Here we can see how the same functionality can be written in two different ways: one with the **?** operator and the other with a match expression.
 
 ## Sources  
-https://fettblog.eu/rust-enums-wrapping-errors/
 
 Sized trait and concepts  
 https://doc.rust-lang.org/nightly/std/marker/trait.Sized.html
