@@ -302,13 +302,6 @@ fn read_yaml_file_fail_1(file: File) -> Result<YamlData, serde_yaml::Error> {
 
 The entire situation is misleading because the issue lies in the absence of the return value. This can be rectified by either removing the final semicolon or appending **Ok(yaml_data)** at the end.
 
-
-
-
-#### Mesage incomprehensible
-
-
-
 #### Misleading syntax and compiler nonsense
 
 ```rust
@@ -347,10 +340,33 @@ error[E0599]: no function or associated item named `new` found for trait `BufRea
 Here is one possible error.
 
 
-// shadowed variable nonsense and no return
 
 
+```rust
+//Missing Ok statement in the end, creates a problem 
+//Either the Ok(yaml_data) has to be set at the end as a return or the let yaml_data shadow hats to be removed
+//If one moves into the game Ok(yaml_data), tthe march operator gets a ; at the end 
+fn read_yaml_file_fail_2(filename: &str) -> Result<YamlData, serde_yaml::Error> {
+    let file_res = match File::open(filename) {
+        Ok(file) => Ok(file),
+        Err(err) => Err(err),
+    };
 
+    let reader = std::io::BufReader::new(file_res);
+    let yaml_data = match serde_yaml::from_reader(reader) {
+        Ok(yaml_data) => yaml_data,
+        //Err(err) => Err(err),
+        Err(err) =>
+        {
+            //return Err("Error reading yaml file please check the file.".into());
+            return Err(err);// Convert the error to the appropriate type, 
+        }
+    };
+
+    //Ok(yaml_data) // TODO learn OK return explanation 
+}
+```
+This error is a bit more misleading. The result value from the match shadowed variable nonsense and no return
 
 
 ## The ultimate solution for error hadling, and compiler handling  
@@ -363,9 +379,7 @@ In the context of the comment, it's emphasized that using ? with from_reader(rea
 
 The phrase "the ultimate solution" implies that using ? operator helps simplify error handling and is considered idiomatic Rust code. However, it's crucial to be aware that the ? operator can only be used in functions that return a Result type.
 
-to avoid the Ok in the end do not shadow the yaml_data in the match expression
-in this case the Ok(yaml_data) => yaml_data will be transformed into Ok(yaml_data) => Ok(yaml_data)
-there is no statement Ok in the end since the last curly brace does not have a semi colon and this means inplictly that the function ends
+In the following ocdde the absence of a semicolon after the closing brace of the match block implicitly returns the value from the match expression. It's important to note that the absence of the Ok variant and the lack of a semicolon after the closing brace indicate the end of the function, which might not be immediately apparent, especially for those transitioning from languages like C/C++.
 ```rust
 fn read_yaml_file_fail_3_1(file: File) -> Result<YamlData, serde_yaml::Error> {
     let reader = std::io::BufReader::new(file);
@@ -385,68 +399,7 @@ fn read_yaml_file_fail_4(file: File) -> Result<YamlData, serde_yaml::Error> {
     Ok(yaml_data) // TODO learn OK return explanation 
 }
 ```
-
-
-
-
-//It returns a Result<User, Box<dyn Error>>, indicating that it can either 
-//successfully return a User struct or an error that implements the Error trait, 
-//wrapped in a Box
-//The question mark operator (?) unwraps valid values or returns erroneous values, 
-//propagating them to the calling function.
-//When applied to values of the Result<T, E> type, it propagates errors. If the 
-//value is Err(e), then it will return Err(From::from(e))
-```rust
-//fn read_yaml_file_1(file: File) -> Result<YamlData, serde_yaml::Error> {
-fn read_yaml_file_1(file: File) -> Result<YamlData, serde_yaml::Error> {
-    let reader = std::io::BufReader::new(file);
-    //let yaml_data = match serde_yaml::from_reader(reader) {
-    match serde_yaml::from_reader(reader) {
-        Ok(yaml_data) => Ok(yaml_data),
-        //Err(err) => Err(err),
-        Err(err) =>
-        {
-            //return Err("Error reading yaml file please check the file.".into());
-            return Err(err);// Convert the error to the appropriate type, 
-        }
-    }
-    //let yaml_data: YamlData = serde_yaml::from_reader(reader)?;
-    //Ok(yaml_data) // TODO learn OK return explanation 
-    //Ok(()) //the inner bracket is called unit and called when there no meaningful return 
-}
-
-
-
-//https://users.rust-lang.org/t/help-understanding-return-for-box-dyn-error/33748/2
-fn read_yaml_file_2(filename: &str) -> Result<YamlData, Box<dyn StdError>> {
-    //let file = std::fs::File::open(filename)?;
-    let file = if let Ok(file) = File::open(filename) {
-        file
-    } else {
-        return Err("Failed to open file".into()); // Convert the error to the appropriate type
-    };
-    let reader = std::io::BufReader::new(file);
-    let yaml_data: YamlData = serde_yaml::from_reader(reader)?;
-    Ok(yaml_data)
-}
-
-fn read_yaml_file_3(filename: &str) -> Result<YamlData, Box<dyn StdError>> {
-    let file = std::fs::File::open(filename)?;
-    let reader = std::io::BufReader::new(file);
-    let yaml_data: YamlData = serde_yaml::from_reader(reader)?;
-    Ok(yaml_data)
-}
-
-fn read_yaml_file_4(file: File) -> Result<YamlData, serde_yaml::Error> {
-    let reader = std::io::BufReader::new(file);
-    // Remove the semicolon at the end of the match statement
-    match serde_yaml::from_reader(reader) {
-        Ok(yaml_data) => Ok(yaml_data),
-        Err(err) => Err(err),
-    }
-}
-```
-
+Here we can see how the same functionality can be written in two different ways: one with the **?** operator and the other with a match expression.
 
 ## Sources  
 https://fettblog.eu/rust-enums-wrapping-errors/
